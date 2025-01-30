@@ -1,0 +1,32 @@
+physical changes: 
+replace chassis
+remove lcd screen
+get rid of on-board computer, replace with raspi 5
+utilize built in drive train (might need dc motor driver)
+keep head, possibly add servo motors for rotating and moving neck
+keep speaker, but may need to be replaced with a different one
+add small camera inside? head (maybe on top of the head chassis for ease)
+keep led ring on head
+rework power distribution system, get rid of C batteries, replace with Lithium battery
+remove battery compartment, replace floor with flat plane to increased space inside
+claw / robotic arm in the back
+
+software: 
+rgb mono slam + motor encoders for keeping track of position
+ros2 + ubuntu 24 on raspi 5 8gb
+
+functions: 
+greeting people when entering room
+grabbing phone from charging station?
+dragging dirty clothes to laundry basket
+reminding of calendar events (connected to apple calendar)
+
+links:
+replacment chassis example: https://www.thingiverse.com/thing:4940563
+
+pi motor encoder repo: /github.com/jtabor/RaspberryPiKernelEncoder
+can probably find a better supported one
+
+apple calendar api (local)
+https://developer.apple.com/documentation/eventkit?language=objc
+need to develop a companion app for mac to read calendar events 
