@@ -1,2 +1,4 @@
 # edward
-fully autonomous robot rover
+fully autonomous robot rover, hacked together from Recon 6.0 robot toy by Smart Lab
+
+
