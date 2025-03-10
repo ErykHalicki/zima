@@ -9,6 +9,9 @@
 #include "kdl/frames.hpp"
 #include "kdl/jntarray.hpp"
 #include "kdl/chainiksolverpos_lma.hpp"
+#include "kdl/chainiksolverpos_nr_jl.hpp"
+#include "kdl/chainiksolvervel_pinv.hpp"
+#include "kdl/chainfksolverpos_recursive.hpp"
 #include "kdl_parser/kdl_parser.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
@@ -50,8 +53,12 @@ public:
             q_min(i) = min_joint_angles[i] * M_PI / 180.0;
             q_max(i) = max_joint_angles[i] * M_PI / 180.0;
         }
+        fk_solver_ = new KDL::ChainFkSolverPos_recursive(chain_);
+        ik_solver_ = new KDL::ChainIkSolverVel_pinv(chain_);
 
-        solver_ = new KDL::ChainIkSolverPos_LMA(chain_);
+        // Now create the IK solver with joint limits
+        solver_ = new KDL::ChainIkSolverPos_NR_JL(chain_, q_min, q_max, *fk_solver_, *ik_solver_, 100, 1e-6);
+        //solver_ = new KDL::ChainIkSolverPos_LMA(chain_);
     }
 
 private:
@@ -104,10 +111,10 @@ private:
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_publisher_;
     KDL::Tree tree_;
     KDL::Chain chain_;
-    KDL::ChainIkSolverPos_LMA* solver_;
-    //KDL::ChainIkSolverPos_NR* solver_;
-    //KDL::ChainFkSolverPos_recursive* fk_solver_;
-    //KDL::ChainIkSolverVel_pinv* ik_solver_;
+    //KDL::ChainIkSolverPos_LMA* solver_;
+    KDL::ChainIkSolverPos_NR_JL* solver_;
+    KDL::ChainFkSolverPos_recursive* fk_solver_;
+    KDL::ChainIkSolverVel_pinv* ik_solver_;
     vector<float> current_arm_angles;
     vector<double> min_joint_angles = {-90, -90,-90,-90,-90,-90,-90,-90};  // Replace with actual limits
     vector<double> max_joint_angles = {90,90,90,90,90,90,90,90};  
