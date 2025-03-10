@@ -8,18 +8,18 @@ int servo1Pin = 4;
 const int minThrottle = 500; // Minimum throttle in microseconds (1ms)
 const int maxThrottle = 2500; // Maximum throttle in microseconds (2ms)
 
-int pins[] = {4, 16, 17, 5};
-float pos[] = {90,90,90,90};      // position in degrees
-float goal[] = {90,90,90,90};
-float speed = 0.5;
+int pins[] = {16, 27, 25, 14, 26, 18, 17, 19};
+float pos[] = {-1,-1,-1,-1,-1,-1,-1,-1};      // position in degrees
+float goal[] = {-1,-1,-1,-1,-1,-1,-1,-1};
+float speed = 0.15;
 Servo motors[8];
 
 void setup() {
   // Initialize PWM for the ESC
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 8; i++) {
     motors[i] = Servo();
     motors[i].setPeriodHertz(50);
-    motors[i].attach(pins[i]);
+    //motors[i].attach(pins[i]);
   }
 
   Serial.begin(115200);
@@ -69,7 +69,23 @@ void parseNewData(){
     currMotor=atoi(strtokIndx);
 
     strtokIndx = strtok(NULL, "<");
-    goal[currMotor] = atof(strtokIndx);     // convert this part to a float
+    if(currMotor < 8){
+      goal[currMotor] = atof(strtokIndx);     // convert this part to a float
+      if(currMotor == 2 || currMotor == 1){ // when you set shoulder joint, it sets left and right to the same angle regardless of which one you set
+        goal[2] = goal[currMotor];
+        goal[1] = 180 - goal[2];
+        if(goal[2] == -1 || goal[1] == -1){//if disabling, disable both
+          goal[1] = -1;
+          goal[2] = -1;
+        }
+      }
+
+      if(currMotor == 6 || currMotor == 7){ // when you set shoulder joint, it sets left and right to the same angle regardless of which one you set
+        goal[7] = goal[currMotor];
+        goal[6] = 180 - goal[7];
+      }
+    }
+    else atof(strtokIndx); //clear the command if the motor # is invalid}
     newData = false;
 }
 
@@ -77,14 +93,31 @@ void loop() {
   // Check for serial input
   recvWithEndMarker();
   if(newData)parseNewData();
-
-  for (int i = 0; i < 4; i++) {
-    motors[i].write(pos[i]);
-    if(pos[i] + speed > goal[i] || pos[i] - speed < goal[i]){
-      pos[i] += sign(goal[i] - pos[i]) * speed;  
+  for (int i = 0; i < 8; i++) {
+    Serial.print(pos[i]);
+    if(goal[i] != -1 && pos[i] == -1){
+      motors[i].attach(pins[i]);
+      Serial.println("attached a motor");
+      pos[i] = goal[i];
     }
-    else{pos[i] = goal[i];}
+    if(goal[i] == -1 && pos[i] != -1){
+      motors[i].detach();
+      pos[i] = -1;
+    }
+  }
+  Serial.println(" ");
+  if(pos[2] != -1)
+    pos[1] = 180 - pos[2]; // extra making sure the angles are correct
+
+  for (int i = 0; i < 8; i++) {
+    if(pos[i] != -1){
+      motors[i].write(pos[i]);
+      if(pos[i] + speed > goal[i] || pos[i] - speed < goal[i]){
+        pos[i] += sign(goal[i] - pos[i]) * speed;  
+      }
+      else{pos[i] = goal[i];}
+    }
   }
   
-  delay(10);
+  delay(1);
 }
