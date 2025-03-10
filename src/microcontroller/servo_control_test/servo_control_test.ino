@@ -1,17 +1,13 @@
 #include <ESP32Servo.h>
 
-// create four servo objects 
-Servo servo1, servo2, servo3, servo4;
-
-int servo1Pin = 4;
 // Define throttle signal values
-const int minThrottle = 500; // Minimum throttle in microseconds (1ms)
-const int maxThrottle = 2500; // Maximum throttle in microseconds (2ms)
+const int minThrottle = 600; // Minimum throttle in microseconds (1ms)
+const int maxThrottle = 2400; // Maximum throttle in microseconds (2ms)
 
 int pins[] = {16, 27, 25, 14, 26, 18, 17, 19};
 float pos[] = {-1,-1,-1,-1,-1,-1,-1,-1};      // position in degrees
 float goal[] = {-1,-1,-1,-1,-1,-1,-1,-1};
-float speed = 0.15;
+float speed = 0.25;
 Servo motors[8];
 
 void setup() {
@@ -84,6 +80,11 @@ void parseNewData(){
         goal[7] = goal[currMotor];
         goal[6] = 180 - goal[7];
       }
+
+      if(currMotor == 4){
+        if(goal[currMotor] != -1)
+          goal[currMotor] = 180 - goal[currMotor]; //invert whatever was received at 4, this is to maintain 0 degrees as "forward"
+      }
     }
     else atof(strtokIndx); //clear the command if the motor # is invalid}
     newData = false;
@@ -108,7 +109,6 @@ void loop() {
   Serial.println(" ");
   if(pos[2] != -1)
     pos[1] = 180 - pos[2]; // extra making sure the angles are correct
-
   for (int i = 0; i < 8; i++) {
     if(pos[i] != -1){
       motors[i].write(pos[i]);
