@@ -65,7 +65,7 @@ private:
     void target_pose_callback(geometry_msgs::msg::Pose msg){
         //call solver code here
         RCLCPP_INFO(this->get_logger(), "received request");
-        vector<float> angles = solveJointAngles(KDL::Vector(msg.position.x, msg.position.y, msg.position.z));
+        vector<float> angles = solveJointAngles(KDL::Vector(msg.position.x, msg.position.y, msg.position.z), KDL::Rotation::Quaternion(msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w));
         
         sensor_msgs::msg::JointState joint_state_msg;
         joint_state_msg.header.stamp = this->get_clock()->now();
@@ -86,7 +86,7 @@ private:
         joint_publisher_->publish(joint_state_msg);
     }
     
-    vector<float> solveJointAngles(KDL::Vector pos){ //returns desired angles in degrees
+    vector<float> solveJointAngles(KDL::Vector pos, KDL::Rotation orientation){ //returns desired angles in degrees
         // Prepare IK solver input variables
         vector<float> result;
 
@@ -94,7 +94,7 @@ private:
 
         for(unsigned int i = 0; i<chain_.getNrOfJoints(); i++) q_init(i) = current_arm_angles[i] * M_PI/180;
 
-        const KDL::Frame p_in(pos);
+        const KDL::Frame p_in(orientation, pos);
         KDL::JntArray q_out(chain_.getNrOfJoints());
 
         // Run IK solver
