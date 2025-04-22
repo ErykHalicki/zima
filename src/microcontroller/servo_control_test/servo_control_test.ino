@@ -4,6 +4,11 @@
 const int minThrottle = 600; // Minimum throttle in microseconds (1ms)
 const int maxThrottle = 2400; // Maximum throttle in microseconds (2ms)
 
+// Published values for SG90 servos
+const int minUs = 1000;
+const int maxUs = 2000;
+
+// Pin configuration for multiple servos
 int pins[] = {16, 27, 25, 14, 26, 18, 17, 19};
 float pos[] = {-1,-1,-1,-1,-1,-1,-1,-1};      // position in degrees
 float goal[] = {-1,-1,-1,-1,-1,-1,-1,-1};
@@ -11,29 +16,26 @@ float speed = 0.25;
 Servo motors[8];
 
 void setup() {
-  // Initialize PWM for the ESC
+  // Initialize PWM for the servos
   for (int i = 0; i < 8; i++) {
     motors[i] = Servo();
     motors[i].setPeriodHertz(50);
-    //motors[i].attach(pins[i]);
   }
 
   Serial.begin(115200);
   while(Serial.available() > 0){
     Serial.read();
   }
-  
 }
 
 int sign(int i){
-  if(i<0) return -1;
-  return 1;
+  return (i < 0) ? -1 : 1;
 }
 
 const byte numChars = 64;
 char receivedChars[numChars];   // an array to store the received data
-
 boolean newData = false;
+
 void recvWithEndMarker() {
     static byte ndx = 0;
     char endMarker = '\n';
@@ -86,7 +88,7 @@ void parseNewData(){
           goal[currMotor] = 180 - goal[currMotor]; //invert whatever was received at 4, this is to maintain 0 degrees as "forward"
       }
     }
-    else atof(strtokIndx); //clear the command if the motor # is invalid}
+    else atof(strtokIndx); //clear the command if the motor # is invalid
     newData = false;
 }
 
@@ -94,6 +96,7 @@ void loop() {
   // Check for serial input
   recvWithEndMarker();
   if(newData)parseNewData();
+  
   for (int i = 0; i < 8; i++) {
     Serial.print(pos[i]);
     if(goal[i] != -1 && pos[i] == -1){
@@ -106,9 +109,11 @@ void loop() {
       pos[i] = -1;
     }
   }
+  
   Serial.println(" ");
   if(pos[2] != -1)
     pos[1] = 180 - pos[2]; // extra making sure the angles are correct
+  
   for (int i = 0; i < 8; i++) {
     if(pos[i] != -1){
       motors[i].write(pos[i]);
