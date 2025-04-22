@@ -62,3 +62,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Minimize dynamic memory allocation
 - Use interrupts where possible
 - Profile code regularly
+
+## Project Zima Specific Details
+### System Overview
+- Articulated robotic arm with multi-joint design
+- Tracked mobile base
+- Research platform for Vision Language Action (VLA) models
+
+### Current Development Focus
+- Hardware Integration
+  * Rotary encoder testing
+  * Motor control validation
+  * Startup behavior optimization
+  * Track mount design and fabrication
+
+- Software Research
+  * Innovative memory representation (directed graph model)
+  * Student-teacher machine learning approach
+  * Local memory search algorithms
+
+### Technical Stack
+- ROS2 Framework
+- Arduino/ESP32 Microcontroller
+- URDF Robotics Modeling
+- Python and C++ Development

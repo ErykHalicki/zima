@@ -27,9 +27,9 @@ def authenticate_google_keep():
 
     try:
         # Attempt authentication
-        success = keep.authenticate(email, master_token)
+        failure = keep.authenticate(email, master_token)
         
-        if not success:
+        if failure:
             print("Authentication failed. Check your credentials.")
             sys.exit(1)
         
