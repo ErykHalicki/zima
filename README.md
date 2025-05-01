@@ -1,24 +1,39 @@
-# zima
-Autonomous robot rover, longer term project for use as a platform for testing end to end neural networks for robotic manipulation
+# Zima: Neural Network Robotic Manipulation Platform
 
-<img width="502" alt="image" src="https://github.com/user-attachments/assets/43fa0d2b-2683-41e5-a6a8-52f394d76e2e" />
+## Project Overview
 
-## Hardware Setup and Considerations
+Zima is an autonomous robotic rover designed as a research platform for developing and testing end-to-end neural networks in robotic manipulation tasks. The project focuses on creating a versatile, adaptable robotic system capable of complex spatial interactions and learning.
 
-### ESP32 Bootup Stabilization
+## Current System Architecture
 
-**Important Hardware Modification:**
-- Add a 1µF capacitor between EN and GND on the ESP32
-- Resolves intermittent bootup issues
-- Helps stabilize the microcontroller during power-on sequence
-- Prevents random boot failures or serial communication problems
+### Hardware Components
+- Articulated robotic arm with multi-joint design
+- Tracked mobile base
+- ESP32 microcontroller
+- Raspberry Pi 5 as primary computer
+- Comprehensive sensor integration (encoders, motors, cameras)
 
-#### Recommended Capacitor Specification
-- Capacitance: 1 µF (microfarad)
-- Voltage Rating: 6.3V or higher
-- Type: Ceramic or Electrolytic
+### Software Stack
+- ROS2 framework
+- Python and C++ development
+- Vision Language Action (VLA) model implementation
+- Custom hardware interface for precise motor and sensor control
 
-### Connection Tips
-- Ensure stable power supply
-- Use the recommended EN pin capacitor
-- Verify all connections before powering on
+## Research Objectives
+- Develop adaptive learning techniques
+- Implement edge computing for robotics
+- Create intelligent sensor data interpretation
+- Explore hierarchical decision-making algorithms
+
+## Computational Infrastructure
+- Local Compute: Raspberry Pi 5
+- Cloud Training: Vast.ai (H100 GPU)
+- Deployment: AWS G6 and G6e GPU instances
+
+## Current Development Focus
+- PI_0 model adaptation
+- 3D positioning system optimization
+- Data collection methodology
+- Innovative memory representation using directed graph model
+
+<img width="502" alt="Project Overview" src="https://github.com/user-attachments/assets/43fa0d2b-2683-41e5-a6a8-52f394d76e2e" />
