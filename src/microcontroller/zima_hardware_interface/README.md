@@ -7,6 +7,10 @@ The Zima Hardware Interface is a modular Arduino sketch designed to control mult
 - Rotary Encoders
 - DC Motors
 
+## Library Updates
+
+Switched from ESP32MX1508 to FS_MX1508 library for improved DC motor control.
+
 ## Hardware Components
 
 ### Servo Motors
@@ -24,6 +28,7 @@ The Zima Hardware Interface is a modular Arduino sketch designed to control mult
 - Single DC motor control
 - Forward/Reverse/Stop functionality
 - Configurable speed and stop mode
+- PWM frequency and resolution control
 
 ## Serial Communication Protocol
 
@@ -32,7 +37,7 @@ The Zima Hardware Interface is a modular Arduino sketch designed to control mult
 - Initialization Message: `ZIMA:INIT:HARDWARE_INTERFACE`
 
 ### Command Format
-Commands follow the pattern: `<subsystem><value>`
+Commands follow the pattern: `subsystem<value\n`
 
 #### Servo Motor Control (0-7)
 - Subsystem: 0-7 (corresponding to servo index)
@@ -47,8 +52,8 @@ Commands follow the pattern: `<subsystem><value>`
 - Reverse (9): `9<speed>` (0-255)
   - Example: `9<150` - Move DC motor in reverse at 150 speed
 - Stop (10): `10<mode>`
-  - `10<1>` - Soft stop
-  - `10<0>` - Hard brake
+  - `10<1` - Soft stop
+  - `10<0` - Hard brake
 
 ### Status Reporting
 Status messages sent in format: `ZIMA:DATA:CLICKSLEFT=X,CLICKSRIGHT=Y,SERVOS=a|b|c|d|e|f|g|h`
@@ -79,23 +84,17 @@ Edit `config.h` to modify:
 3. Parse incoming status messages
 4. Maintain a short delay between commands
 
-## Error Handling
-
-- Invalid subsystem/command: Silently ignored
-- Out-of-range values: Clamped or ignored
-- Serial communication: Robust parsing with end marker
-
-## Future Improvements
-
-- Add error reporting
-- Implement more complex motion profiles
-- Support for additional motor types
-- Enhanced synchronization between components
-
 ## Dependencies
 
 - ESP32Servo library
-- ESP32MX1508 library
+- FS_MX1508 library
+
+## Library Transition Notes
+
+The DC motor control has been updated from ESP32MX1508 to FS_MX1508 library. Key changes:
+- Simplified motor control methods
+- More flexible PWM configuration
+- Improved compatibility
 
 ## Troubleshooting
 
