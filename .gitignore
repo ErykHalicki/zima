@@ -53,3 +53,5 @@ qtcreator-*
 CATKIN_IGNORE
 .DS_Store
 .env
+
+**/.claude/settings.local.json

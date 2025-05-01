@@ -57,7 +57,7 @@ public:
         ik_solver_ = new KDL::ChainIkSolverVel_pinv(chain_);
 
         // Now create the IK solver with joint limits
-        solver_ = new KDL::ChainIkSolverPos_NR_JL(chain_, q_min, q_max, *fk_solver_, *ik_solver_, 100, 1e-6);
+        solver_ = new KDL::ChainIkSolverPos_NR_JL(chain_, q_min, q_max, *fk_solver_, *ik_solver_, 1000, 1e-4);
         //solver_ = new KDL::ChainIkSolverPos_LMA(chain_);
     }
 

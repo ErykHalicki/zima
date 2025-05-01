@@ -11,16 +11,16 @@ const byte numChars = 64;
 char receivedChars[numChars];
 boolean newData = false;
 
+
 void setup() {
   Serial.begin(SERIAL_BAUD);
-  Serial.println("ZIMA:INIT:HARDWARE_INTERFACE");
 
   // Initialize subsystems
   servoController.init();
   encoderController.init();
-  dcMotorController.init();  // Added DC motor initialization
+  dcMotorController.init();
 
-  Serial.println("Zima Hardware Interface Ready");
+  Serial.println("ZIMA:INIT:HARDWARE_INTERFACE");
 }
 
 void recvWithEndMarker() {
@@ -59,14 +59,23 @@ void parseNewData() {
         case 0 ... 7:  // Servo motors
             servoController.setGoal(subsystem, value);
             break;
-        case 8:  // DC Motor Forward
-            dcMotorController.forward(static_cast<int>(value));
+        case 8:  // Left DC Motor Forward
+            dcMotorController.leftMotorForward(static_cast<int>(value));
             break;
-        case 9:  // DC Motor Reverse
-            dcMotorController.reverse(static_cast<int>(value));
+        case 9:  // Left DC Motor Reverse
+            dcMotorController.leftMotorReverse(static_cast<int>(value));
             break;
-        case 10:  // DC Motor Stop
-            dcMotorController.stop(value > 0);
+        case 10:  // Left DC Motor Stop
+            dcMotorController.leftMotorStop(value > 0);
+            break;
+        case 11:  // Right DC Motor Forward
+            dcMotorController.rightMotorForward(static_cast<int>(value));
+            break;
+        case 12:  // Right DC Motor Reverse
+            dcMotorController.rightMotorReverse(static_cast<int>(value));
+            break;
+        case 13:  // Right DC Motor Stop
+            dcMotorController.rightMotorStop(value > 0);
             break;
     }
 }

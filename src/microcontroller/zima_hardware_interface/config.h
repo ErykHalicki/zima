@@ -23,6 +23,6 @@ const int SERVO_PINS[] = {16, 27, 25, 14, 26, 18, 17, 19};
 
 // Timing and Debounce
 #define ENCODER_DEBOUNCE_DELAY 5  // ms
-#define MAIN_LOOP_DELAY 3        // ms
+#define MAIN_LOOP_DELAY 10        // ms
 
 #endif // ZIMA_HARDWARE_CONFIG_H
