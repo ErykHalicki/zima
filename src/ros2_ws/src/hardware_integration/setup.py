@@ -26,6 +26,8 @@ setup(
             "serial_sender=hardware_integration.serial_sender:main",
             "serial_receiver=hardware_integration.serial_receiver:main",
             "command_generator=hardware_integration.command_generator:main",
+            "joy_control=hardware_integration.joy_control:main",
+            "joy_tester=hardware_integration.joy_tester:main",
         ],
     },
 )
