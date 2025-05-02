@@ -23,7 +23,7 @@ const int SERVO_PINS[] = {16, 27, 25, 14, 26, 18, 17, 19};
 
 // Timing and Debounce
 #define ENCODER_DEBOUNCE_DELAY 5  // ms
-#define MAIN_LOOP_DELAY 10        // ms
+#define MAIN_LOOP_DELAY 2        // ms
 
 // Servo Motor Movement Speed
 #define SERVO_SPEED 0.6         // Range: 0.1 - 1.0, controls servo movement speed
