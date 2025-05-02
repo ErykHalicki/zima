@@ -1,3 +1,4 @@
+#include <ESP32Servo.h>
 #include "config.h"
 #include "servo_control.h"
 #include "encoder_control.h"
