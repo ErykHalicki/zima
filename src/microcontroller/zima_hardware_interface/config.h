@@ -26,6 +26,6 @@ const int SERVO_PINS[] = {16, 27, 25, 14, 26, 18, 17, 19};
 #define ENCODER_DEBOUNCE_DELAY 5  // ms
 
 // Servo Motor Movement Speed
-#define SERVO_SPEED 20         // Degrees per second
+#define SERVO_SPEED 50         // Degrees per second
 
 #endif // ZIMA_HARDWARE_CONFIG_H
