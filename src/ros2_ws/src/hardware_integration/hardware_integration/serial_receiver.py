@@ -13,7 +13,7 @@ class SerialReceiverNode(Node):
         self.declare_parameter('serial_port', '/dev/ttyUSB0')
         self.declare_parameter('baud_rate', 115200)
         self.declare_parameter('timeout', 0.1)
-        self.declare_parameter('update_rate', 50.0)  # Hz
+        self.declare_parameter('update_rate', 200.0)  # Hz
         
         # Get parameters
         serial_port = self.get_parameter('serial_port').get_parameter_value().string_value

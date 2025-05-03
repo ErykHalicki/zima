@@ -9,9 +9,10 @@ private:
     Servo motors[SERVO_COUNT];
     float pos[SERVO_COUNT];
     float goal[SERVO_COUNT];
-    float speed = SERVO_SPEED;
+    float speed = SERVO_SPEED; // degrees per second
+    unsigned long lastUpdateTime;
 
-    int sign(int i) {
+    int sign(float i) {
         return (i < 0) ? -1 : 1;
     }
 
@@ -21,6 +22,7 @@ public:
             pos[i] = -1;
             goal[i] = -1;
         }
+        lastUpdateTime = micros();
     }
 
     void init() {
@@ -31,6 +33,11 @@ public:
     }
 
     void updatePositions() {
+        // Calculate delta time in seconds
+        unsigned long currentTime = micros();
+        float deltaTime = (currentTime - lastUpdateTime) / 1000000.0; // Convert to seconds
+        lastUpdateTime = currentTime;
+        
         for (int i = 0; i < SERVO_COUNT; i++) {
             if (goal[i] != -1 && pos[i] == -1) {
                 motors[i].attach(SERVO_PINS[i]);
@@ -47,9 +54,13 @@ public:
   
         for (int i = 0; i < SERVO_COUNT; i++) {
             if (pos[i] != -1) {
+                // Calculate movement based on speed (degrees per second) and delta time
+                float movement = speed * deltaTime;
+                float distanceToGoal = goal[i] - pos[i];
+                
                 motors[i].write(pos[i]);
-                if (pos[i] + speed > goal[i] || pos[i] - speed < goal[i]) {
-                    pos[i] += sign(goal[i] - pos[i]) * speed;  
+                if (abs(distanceToGoal) > movement) {
+                    pos[i] += sign(distanceToGoal) * movement;
                 }
                 else {
                     pos[i] = goal[i];

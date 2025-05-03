@@ -12,6 +12,10 @@ const byte numChars = 64;
 char receivedChars[numChars];
 boolean newData = false;
 
+// Timing control for status reports
+unsigned long lastStatusTime = 0;
+const unsigned long statusInterval = 1000000 / STATUS_REPORT_RATE; // microseconds
+
 
 void setup() {
   Serial.begin(SERIAL_BAUD);
@@ -20,6 +24,9 @@ void setup() {
   servoController.init();
   encoderController.init();
   dcMotorController.init();
+  
+  // Initialize timing
+  lastStatusTime = micros();
 
   Serial.println("ZIMA:INIT:HARDWARE_INTERFACE");
 }
@@ -112,8 +119,12 @@ void loop() {
     // Update Motor Positions
     servoController.updatePositions();
     
-    // Report System Status
-    reportStatus();
+    // Report System Status at specified rate
+    unsigned long currentTime = micros();
+    if (currentTime - lastStatusTime >= statusInterval) {
+        reportStatus();
+        lastStatusTime = currentTime;
+    }
     
-    delay(MAIN_LOOP_DELAY);
+    // No delay - run as fast as possible
 }
