@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Header
+from sensor_msgs.msg import JointState
 from zima_msgs.msg import HardwareStatus, EncoderData, ServoPositions
 import serial
 import re
@@ -38,9 +39,10 @@ class SerialReceiverNode(Node):
             10
         )
         
-        self.servo_positions_pub = self.create_publisher(
-            ServoPositions,
-            'servo_positions',
+        # Joint state publisher for RViz visualization
+        self.joint_states_pub = self.create_publisher(
+            JointState,
+            'current_servo_positions',
             10
         )
         
@@ -121,11 +123,7 @@ class SerialReceiverNode(Node):
                 servo_str = servo_match.group(1)
                 servo_positions = [float(pos) for pos in servo_str.split('|')]
                 
-                # Publish servo positions
-                servo_msg = ServoPositions()
-                servo_msg.header = self.create_header()
-                servo_msg.positions = servo_positions
-                self.servo_positions_pub.publish(servo_msg)
+                self.publish_joint_states(servo_positions)
             
             # Publish complete hardware status
             status_msg = HardwareStatus()
@@ -147,6 +145,31 @@ class SerialReceiverNode(Node):
         header.stamp = self.get_clock().now().to_msg()
         header.frame_id = 'zima_base'
         return header
+    
+    def publish_joint_states(self, servo_positions):
+        """Publish joint states from servo positions."""
+        # Define joint names 
+        joint_names = [
+            'base_joint',       # Base rotation 
+            'shoulder_joint',   # Shoulder pitch
+            'elbow_joint',      # Elbow pitch
+            'hand_joint',       # Hand pitch
+            'wrist_joint',      # Wrist rotation
+        ]
+        
+        # Ensure we have enough servo positions
+        if len(servo_positions) >= len(joint_names):
+            joint_msg = JointState()
+            joint_msg.header = self.create_header()
+            joint_msg.name = joint_names
+            
+            # You might need to adjust this conversion based on your actual servo range
+            joint_msg.position = [
+                float(pos - 90.0) for pos in servo_positions[:len(joint_names)]
+            ]
+            
+            # Publish joint states
+            self.joint_states_pub.publish(joint_msg)#published from -90 to 90
     
     def destroy_node(self):
         """Clean up when node is shutting down."""

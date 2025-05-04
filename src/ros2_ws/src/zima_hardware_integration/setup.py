@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 import os
 from glob import glob
 
-package_name = 'hardware_integration'
+package_name = 'zima_hardware_integration'
 
 setup(
     name=package_name,
@@ -23,11 +23,11 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "serial_sender=hardware_integration.serial_sender:main",
-            "serial_receiver=hardware_integration.serial_receiver:main",
-            "command_generator=hardware_integration.command_generator:main",
-            "joy_control=hardware_integration.joy_control:main",
-            "joy_tester=hardware_integration.joy_tester:main",
+            "serial_sender=zima_hardware_integration.serial_sender:main",
+            "serial_receiver=zima_hardware_integration.serial_receiver:main",
+            "command_generator=zima_hardware_integration.command_generator:main",
+            "joy_control=zima_hardware_integration.joy_control:main",
+            "joy_tester=zima_hardware_integration.joy_tester:main",
         ],
     },
 )

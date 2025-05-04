@@ -10,7 +10,7 @@ class CommandGeneratorNode(Node):
         # Subscribe to high-level control topics
         self.joint_state_sub = self.create_subscription(
             JointState,
-            '/joint_states',
+            '/goal_joint_state',
             self.joint_state_callback,
             10
         )
@@ -57,7 +57,7 @@ class CommandGeneratorNode(Node):
                 command = HardwareCommand()
                 command.header = msg.header
                 command.subsystem = servo_idx  # Servo ID (0-7)
-                command.value = msg.position[i] + 90.0  # Add 90 degrees as in original code
+                command.value = msg.position[i] + 90.0  # Add 90 degrees, microcontroller operates in range 0-180
                 
                 self.hw_command_pub.publish(command)
     

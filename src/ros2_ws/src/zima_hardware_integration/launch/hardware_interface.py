@@ -25,7 +25,7 @@ def generate_launch_description():
     
     # Create node configurations
     serial_receiver_node = Node(
-        package='hardware_integration',
+        package='zima_hardware_integration',
         executable='serial_receiver',
         name='serial_receiver_node',
         parameters=[{
@@ -38,7 +38,7 @@ def generate_launch_description():
     )
     
     serial_sender_node = Node(
-        package='hardware_integration',
+        package='zima_hardware_integration',
         executable='serial_sender',
         name='serial_sender_node',
         parameters=[{
@@ -50,7 +50,7 @@ def generate_launch_description():
     )
     
     command_generator_node = Node(
-        package='hardware_integration',
+        package='zima_hardware_integration',
         executable='command_generator',
         name='command_generator_node',
         output='screen'

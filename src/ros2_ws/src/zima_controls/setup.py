@@ -10,6 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name + '/launch', ['launch/arm_control.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -20,7 +21,10 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'ikpy_test = zima_controls.ikpy_test:main'
+            'ikpy_test = zima_controls.ikpy_test:main',
+            'ik_service = zima_controls.ik_service:main',
+            'ik_client_speed_test = zima_controls.ik_client_speed_test:main',
+            'arm_controller = zima_controls.arm_controller:main'
         ],
     },
 )

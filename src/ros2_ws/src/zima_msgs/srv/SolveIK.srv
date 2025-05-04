@@ -1,0 +1,5 @@
+geometry_msgs/Pose target_pose
+sensor_msgs/JointState initial_guess
+---
+sensor_msgs/JointState solution
+bool success

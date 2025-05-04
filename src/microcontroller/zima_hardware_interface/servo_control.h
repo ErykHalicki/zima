@@ -84,7 +84,7 @@ public:
                 goal[7] = angle;
                 goal[6] = 180 - goal[7];
             }
-            else if (motorIndex == 4) {
+            else if (motorIndex == 3) {
                 if (angle != -1)
                     goal[motorIndex] = 180 - angle;
             }

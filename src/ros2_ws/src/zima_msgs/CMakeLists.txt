@@ -9,6 +9,8 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ServoCommand.msg"
@@ -17,7 +19,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ServoPositions.msg"
   "msg/HardwareCommand.msg"
   "msg/HardwareStatus.msg"
-  DEPENDENCIES std_msgs
+  "srv/SolveIK.srv"
+  DEPENDENCIES std_msgs geometry_msgs sensor_msgs
 )
 
 ament_package()
