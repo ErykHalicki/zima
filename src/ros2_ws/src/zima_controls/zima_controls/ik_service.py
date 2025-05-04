@@ -181,44 +181,48 @@ class IKService(Node):
             # Prepend and append placeholder joints for IKPy
             full_initial_guess = [0] + list(initial_guess) + [0]
             
-            # Solve inverse kinematics
-            ik_solution = self.chain.inverse_kinematics_frame(
-                target=target_matrix, 
-                initial_position=full_initial_guess,
-                orientation_mode="all"
-            )
+            orientation_modes = ["all","X","Y","Z", None]
+
+            for mode in orientation_modes:
+                # Solve inverse kinematics
+                ik_solution = self.chain.inverse_kinematics_frame(
+                    target=target_matrix, 
+                    initial_position=full_initial_guess,
+                    orientation_mode=mode
+                )
             
-            # Remove first and last placeholder joints
-            joint_states = ik_solution[1:-1]
+                # Remove first and last placeholder joints
+                joint_states = ik_solution[1:-1]
             
-            # Do forward kinematics to verify
-            full_fk_solution = [0] + list(joint_states) + [0]
-            achieved_matrix = self.chain.forward_kinematics(full_fk_solution)
+                # Do forward kinematics to verify
+                full_fk_solution = [0] + list(joint_states) + [0]
+                achieved_matrix = self.chain.forward_kinematics(full_fk_solution)
             
-            # Convert achieved matrix to pose
-            achieved_pose = self.matrix_to_pose(achieved_matrix)
+                # Convert achieved matrix to pose
+                achieved_pose = self.matrix_to_pose(achieved_matrix)
             
-            # Calculate position error
-            pos_error = self.calculate_position_error(request.target_pose, achieved_pose)
+                # Calculate position error
+                pos_error = self.calculate_position_error(request.target_pose, achieved_pose)
             
-            # Decide on success
-            if pos_error <= pos_error_threshold:
-                # Successful IK solution - convert to degrees and round
-                joint_states_deg = [round(np.degrees(js), 1) for js in joint_states]
+                # Decide on success
+                if pos_error <= pos_error_threshold:
+                    # Successful IK solution - convert to degrees and round
+                    joint_states_deg = [round(np.degrees(js), 1) for js in joint_states]
                 
-                # Successful IK solution
-                response.solution.position = joint_states_deg
-                response.success = True
-                self.get_logger().info(f'IK solved: {joint_states_deg}. Pos error: {pos_error}')
+                    # Successful IK solution
+                    response.solution.position = joint_states_deg
+                    response.success = True
+                    self.get_logger().info(f'IK solved in mode {mode}: {joint_states_deg}. Pos error: {pos_error}')
                 
-                # Optional debug visualization
-                if debug_mode:
-                    self.visualize_arm_state(self.chain, joint_states)
-            else:
-                # Failed to find a good solution
-                response.solution.position = initial_guess
-                response.success = False
-                self.get_logger().warning(f'IK solution failed. Pos error: {pos_error}')
+                    # Optional debug visualization
+                    if debug_mode:
+                        self.visualize_arm_state(self.chain, joint_states)
+                    break
+                else:
+                    # Failed to find a good solution
+                    response.solution.position = initial_guess
+                    response.success = False
+                    self.get_logger().warning(f'IK solution failed on mode "{mode}". Pos error: {pos_error}')
             
             return response
         
