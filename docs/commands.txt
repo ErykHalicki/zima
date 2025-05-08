@@ -1,2 +1,6 @@
 # ROS2 Inverse Kinematics Service Test Command
+
 ros2 service call /solve_inverse_kinematics zima_msgs/srv/SolveIK "{target_pose: {position: {x: 0.2, y: 0.3, z: 0.4}, orientation: {x: 0, y: 0, z: 0, w: 1}}, initial_guess: {position: [0.0, 0.0, 0.0, 0.0, 0.0]}}"
+
+# arm controller goal pose test command
+ros2 topic pub /goal_arm_pose geometry_msgs/msg/Pose "{position: {x: 0.2, y: 0.0, z: 0.2}, orientation: {x: 0.0, y: 0.7, z: 0.0, w: 0.7}}"
