@@ -6,6 +6,7 @@ from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Pose
 
 from zima_msgs.srv import SolveIK
+from zima_msgs.msg import GripperCommand
 
 
 class ArmController(Node):
@@ -34,6 +35,14 @@ class ArmController(Node):
             self.goal_pose_callback, 
             qos_profile
         )
+
+        # Gripper Command subscriber
+        self.gripper_command_sub = self.create_subscription(
+            GripperCommand, 
+            '/gripper_command', 
+            self.gripper_command_callback, 
+            qos_profile
+        )
         
         # IK solver service client
         self.ik_client = self.create_client(SolveIK, 'solve_inverse_kinematics')
@@ -43,6 +52,13 @@ class ArmController(Node):
             JointState, 
             '/goal_joint_state', 
             qos_profile
+        )
+
+        self.servo_command_pub = self.create_publisher(
+            ServoCommand,
+            '/servo_command',
+            self.servo_command_callback,
+            10
         )
         
         # Store current servo positions
@@ -54,6 +70,20 @@ class ArmController(Node):
     def current_positions_callback(self, msg):
         """Update current servo positions"""
         self.current_positions = msg
+    
+    def gripper_command_callback(self, msg):
+        servo_msg1 = ServoCommand()
+        servo_msg2 = ServoCommand()
+        servo_msg1.servo_id = 6
+        servo_msg2.servo_id = 7
+        if msg.close:
+            servo_msg1.position = msg.width * 5 + 20 #narrow
+            servo_msg2.position = msg.width * 5 + 20 #narrow
+        else:
+            servo_msg1.position = msg.width * 10 + 90 #wide
+            servo_msg2.position = msg.width * 10 + 90 #wide
+        self.servo_command_pub.publish(servo_msg1)
+        self.servo_command_pub.publish(servo_msg2)
     
     def goal_pose_callback(self, goal_pose):
         """Solve IK for the goal pose and publish goal joint states"""

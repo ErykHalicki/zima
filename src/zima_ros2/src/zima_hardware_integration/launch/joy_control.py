@@ -30,18 +30,6 @@ def generate_launch_description():
         description='Maximum speed value (0-255)'
     )
     
-    serial_port_arg = DeclareLaunchArgument(
-        'serial_port',
-        default_value='/dev/ttyUSB0',
-        description='Serial port for hardware communication'
-    )
-    
-    baud_rate_arg = DeclareLaunchArgument(
-        'baud_rate',
-        default_value='115200',
-        description='Baud rate for serial communication'
-    )
-
     # Define all nodes
     joy_node = Node(
         package='joy',
@@ -55,56 +43,25 @@ def generate_launch_description():
     )
     
     joy_control_node = Node(
-        package='hardware_integration',
+        package='zima_hardware_integration',
         executable='joy_control',
         name='joy_control_node',
         parameters=[{
             'joy_deadzone': LaunchConfiguration('joy_deadzone'),
             'max_speed': LaunchConfiguration('max_speed'),
-            'linear_axis': 1,     # Left stick Y for forward/backward
-            'angular_axis': 0,    # Left stick X for left/right
+            'linear_axis': 0,     # Left stick Y for forward/backward
+            'angular_axis': 1,    # Left stick X for left/right
             'enable_button': 5,   # R1 button (index 5)
             'emergency_stop_button': 7,  # R2 button (index 7)
         }]
     )
-    
-    serial_sender_node = Node(
-        package='hardware_integration',
-        executable='serial_sender',
-        name='serial_sender_node',
-        parameters=[{
-            'serial_port': LaunchConfiguration('serial_port'),
-            'baud_rate': LaunchConfiguration('baud_rate'),
-        }]
-    )
-    
-    serial_receiver_node = Node(
-        package='hardware_integration',
-        executable='serial_receiver',
-        name='serial_receiver_node',
-        parameters=[{
-            'serial_port': LaunchConfiguration('serial_port'),
-            'baud_rate': LaunchConfiguration('baud_rate'),
-        }]
-    )
-    
-    command_generator_node = Node(
-        package='hardware_integration',
-        executable='command_generator',
-        name='command_generator_node'
-    )
-    
+       
     # Create and return launch description
     return LaunchDescription([
         joy_dev_arg,
         joy_config_arg,
         joy_deadzone_arg,
         max_speed_arg,
-        serial_port_arg,
-        baud_rate_arg,
         joy_node,
         joy_control_node,
-        serial_sender_node,
-        serial_receiver_node,
-        command_generator_node
     ])

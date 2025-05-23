@@ -15,6 +15,7 @@ find_package(sensor_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ServoCommand.msg"
   "msg/MotorCommand.msg"
+  "msg/GripperCommand.msg"
   "msg/EncoderData.msg"
   "msg/ServoPositions.msg"
   "msg/HardwareCommand.msg"
