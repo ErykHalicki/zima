@@ -76,7 +76,7 @@ class ArmController(Node):
         servo_msg2 = ServoCommand()
         servo_msg1.servo_id = 6
         servo_msg2.servo_id = 7
-        if msg.close:
+        if not msg.open:
             servo_msg1.position = msg.width * 5 + 20 #narrow
             servo_msg2.position = msg.width * 5 + 20 #narrow
         else:
