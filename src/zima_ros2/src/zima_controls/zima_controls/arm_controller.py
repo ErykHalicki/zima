@@ -77,11 +77,11 @@ class ArmController(Node):
         servo_msg1.servo_id = 6
         servo_msg2.servo_id = 7
         if not msg.open:
-            servo_msg1.position = msg.width * 5 + 20 #narrow
-            servo_msg2.position = msg.width * 5 + 20 #narrow
+            servo_msg1.position = msg.width * 5 + 10.0 #narrow
+            servo_msg2.position = msg.width * 5 + 10.0 #narrow
         else:
-            servo_msg1.position = msg.width * 10 + 90 #wide
-            servo_msg2.position = msg.width * 10 + 90 #wide
+            servo_msg1.position = msg.width * 10 + 90.0 #wide
+            servo_msg2.position = msg.width * 10 + 90.0 #wide
         self.servo_command_pub.publish(servo_msg1)
         self.servo_command_pub.publish(servo_msg2)
     
