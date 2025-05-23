@@ -7,6 +7,7 @@ from geometry_msgs.msg import Pose
 
 from zima_msgs.srv import SolveIK
 from zima_msgs.msg import GripperCommand
+from zima_msgs.msg import ServoCommand
 
 
 class ArmController(Node):
