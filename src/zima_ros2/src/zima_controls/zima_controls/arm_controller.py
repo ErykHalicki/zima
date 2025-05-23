@@ -58,7 +58,6 @@ class ArmController(Node):
         self.servo_command_pub = self.create_publisher(
             ServoCommand,
             '/servo_command',
-            self.servo_command_callback,
             10
         )
         
