@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Zima is a low-cost autonomous robotic rover designed as a personal research platform for developing and testing end-to-end neural networks in robotic manipulation tasks. Mainly done to allow me to test VLA fine tuning and implementation, as well as neural network based inverse kinematics.
+Zima is a low-cost autonomous robotic rover designed as a personal research platform for developing and testing end-to-end neural networks in robotic manipulation tasks. Mainly done to allow me to test VLA fine tuning and implementation, neural network based inverse kinematics, online RL training, and anything else that piques my interest.
 
 <img src="https://github.com/user-attachments/assets/a8970ae2-b656-4fd7-85b0-6ae1a3be184e" width="400">
 
