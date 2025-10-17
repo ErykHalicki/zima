@@ -1,4 +1,4 @@
-# Zima: End to End Robotic Manipulation Platform
+# Zima: Low Cost Robotic Manipulation Platform
 
 ## Project Overview
 
@@ -6,12 +6,9 @@ Zima is a low-cost autonomous robotic rover designed as a personal research plat
 
 <img src="https://github.com/user-attachments/assets/a8970ae2-b656-4fd7-85b0-6ae1a3be184e" width="400">
 
-## Research Objectives
 
 ## Current Development Focus
-- PI_0 VLA model adaptation
-- Neural Network-based Inverse Kinematics
-- Long-term memory representation using directed graph model
+- SmolVLA model adaptation
 
 ## Current System Architecture
 
@@ -25,10 +22,4 @@ Zima is a low-cost autonomous robotic rover designed as a personal research plat
 - ROS2 framework
 - PyTorch for neural network development
 - Custom hardware interface
-
-## Computational Infrastructure
-- Local Compute: Raspberry Pi 5 + ESP32
-- Deployment: AWS G6 and G6e GPU instances
-- Cloud Training: Vast.ai (H100 GPU)
-
 
