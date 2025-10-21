@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.nn.functional as F
 
+# roughly following https://docs.pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
+
 MNIST_PATH = '/Users/erykhalicki/Documents/projects/current/zima/src/ml/MNIST_CNN/'
 #TRAINING PARAMETERS
 batch_size = 16
