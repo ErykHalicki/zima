@@ -3,6 +3,8 @@ import torchvision
 import torchvision.transforms as transforms
 import numpy as np
 import matplotlib.pyplot as plt
+import torch.nn as nn
+import torch.nn.functional as F
 
 MNIST_PATH = '/Users/erykhalicki/Documents/projects/current/zima/src/ml/MNIST_CNN/'
 #TRAINING PARAMETERS
@@ -36,3 +38,18 @@ def imshow(img):
 print(labels)
 imshow(torchvision.utils.make_grid(images))
 
+class SimpleConvNet(nn.Module):
+    def __init__(self, 
+                 input_image_size=28, 
+                 convolution_kernel_width=3, 
+                 convolution_kernel_output_dim=3):
+        super.__init__()
+        self.input_size = input_image_size
+        self.convolution_layer = nn.Conv2d(1, 
+                                           convolution_kernel_output_dim, 
+                                           convolution_kernel_width) # 1 input (grayscale),n output layers, nxn kernel
+        convolution_layer_output_size = (self.input_size - ) + 1 
+        #calculate output size, of pool and conv, then plug into linear input
+        self.max_pool_1 = nn.MaxPool2d(2,2) #2x2 maxpool
+        
+        self.linear_layer_1 = nn.Linear(100, 10) #classifier
