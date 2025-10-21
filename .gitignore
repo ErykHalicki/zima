@@ -58,3 +58,4 @@ CATKIN_IGNORE
 
 **/.DS_Store
 **/venv
+**.pt
