@@ -11,7 +11,7 @@ import torch.optim as optim
 
 MNIST_PATH = '/home/eryk/Documents/projects/zima/src/ml/MNIST_CNN'
 #TRAINING PARAMETERS
-batch_size = 16
+batch_size = 64
 
 main_device = torch.device("cpu")
 if torch.backends.mps.is_available():
@@ -25,12 +25,12 @@ PIL_to_Tensor = transforms.ToTensor()
 mnist_train_dataset = torchvision.datasets.MNIST(MNIST_PATH, train=True, transform = PIL_to_Tensor)
 mnist_train_dataloader = torch.utils.data.DataLoader(mnist_train_dataset, 
                                                      batch_size=batch_size, 
-                                                     shuffle=True, num_workers=0)
+                                                     shuffle=True, num_workers=6)
 
 mnist_test_dataset = torchvision.datasets.MNIST(MNIST_PATH, train=False, transform = PIL_to_Tensor)
 mnist_test_dataloader = torch.utils.data.DataLoader(mnist_test_dataset, 
                                                      batch_size=batch_size, 
-                                                     shuffle=False, num_workers=0)
+                                                     shuffle=False, num_workers=6)
 
 training_iterator = iter(mnist_train_dataloader)
 
@@ -46,8 +46,8 @@ imshow(torchvision.utils.make_grid(images))
 class SmallConvNet(nn.Module):
     def __init__(self, 
                  input_image_size=28, 
-                 convolution_kernel_width=3, 
-                 convolution_kernel_output_dim=3,
+                 convolution_kernel_width=5, 
+                 convolution_kernel_output_dim=10,
                  max_pool_width=2):
         super().__init__()
         self.image_size = input_image_size
@@ -74,10 +74,10 @@ small_conv_net = SmallConvNet().to(main_device)
 cross_entropy_loss = nn.CrossEntropyLoss()
 optimizer = optim.SGD(small_conv_net.parameters(), lr=0.001, momentum=0.9)
 
-for epoch in range(3):
+for epoch in range(10):
     running_loss = 0.0
-    for i, batch_tuple in enumerate(mnist_train_dataloader):
-        images, labels = batch_tuple
+    for train_batch_index, train_batch_tuple in enumerate(mnist_train_dataloader):
+        images, labels = train_batch_tuple
         images = images.to(main_device)
         labels = labels.to(main_device)
         optimizer.zero_grad()
@@ -91,27 +91,35 @@ for epoch in range(3):
         optimizer.step() # do W = W - grad*lr
         running_loss += loss.item() #extract numeric value of the loss
 
-        if i % 100 == 99:    # print every 100 mini-batches
-            print(f'[epoch: {epoch + 1:3d}, batch: {i + 1:5d}] loss: {running_loss / 100:.3f}')
+        if train_batch_index % 100 == 99:    # print every 100 mini-batches
+            print(f'[epoch: {epoch + 1:3d}, batch: {train_batch_index + 1:5d}] loss: {running_loss / 100:.3f}')
             running_loss = 0.0
+
+    total_correct_predictions = total_predictions = 0    
+    with torch.no_grad(): #dont calculate gradients to speed up inference
+        for test_batch_index, test_batch_tuple in enumerate(mnist_test_dataloader):
+            images, labels = test_batch_tuple
+            images = images.to(main_device)
+            labels = labels.to(main_device)
+
+            logits = small_conv_net(images)
+            max_logits, predictions = torch.max(logits, dim=1)
+            # getting max along dim 1, since dim 0 would return the sample that had highest confidence in the batch (for each class), not the highest confidence class in each sample
+            for label, prediction in zip(labels, predictions):
+                if label == prediction:
+                    total_correct_predictions += 1
+                total_predictions += 1
+
+        test_set_accuracy = total_correct_predictions / total_predictions * 100.0
+        print(f"Accuracy after epoch {epoch+1}: {test_set_accuracy}%")
 
 MODEL_SAVE_PATH = './simple_mnist_conv_net.pt'
 torch.save(small_conv_net.state_dict(), MODEL_SAVE_PATH)
 
-mnist_test_data_iterator = iter(mnist_test_dataloader)
-images, labels = next(mnist_test_data_iterator)
-
-
-small_conv_net = SmallConvNet()
+small_conv_net = SmallConvNet().to(main_device)
 small_conv_net.load_state_dict(torch.load(MODEL_SAVE_PATH, weights_only=True))
 # re load the model for practice
 
-logits = small_conv_net(images)
-max_logits, predictions = torch.max(logits, dim=1) 
-# getting max along dim 1, since dim 0 would return the sample that had highest confidence in the batch (for each class), not the highest confidence class in each sample
-print(f'Ground Truth: {labels}')
-print(f"Predictions: {predictions}")
-imshow(torchvision.utils.make_grid(images))
 
 
-
+    
