@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import StepLR
 
 # roughly following https://docs.pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
 
-MNIST_PATH = '/home/eryk/Documents/projects/zima/src/ml/MNIST_CNN'
+MNIST_PATH = './'
 #TRAINING PARAMETERS
 batch_size = 64
 
@@ -26,12 +26,12 @@ PIL_to_Tensor = transforms.ToTensor()
 mnist_train_dataset = torchvision.datasets.MNIST(MNIST_PATH, train=True, transform = PIL_to_Tensor)
 mnist_train_dataloader = torch.utils.data.DataLoader(mnist_train_dataset, 
                                                      batch_size=batch_size, 
-                                                     shuffle=True, num_workers=6)
+                                                     shuffle=True, num_workers=0)
 
 mnist_test_dataset = torchvision.datasets.MNIST(MNIST_PATH, train=False, transform = PIL_to_Tensor)
 mnist_test_dataloader = torch.utils.data.DataLoader(mnist_test_dataset, 
                                                      batch_size=batch_size, 
-                                                     shuffle=False, num_workers=6)
+                                                     shuffle=False, num_workers=0)
 
 training_iterator = iter(mnist_train_dataloader)
 
