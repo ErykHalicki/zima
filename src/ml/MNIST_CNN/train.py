@@ -30,7 +30,7 @@ mnist_train_dataloader = torch.utils.data.DataLoader(mnist_train_dataset,
 
 mnist_test_dataset = torchvision.datasets.MNIST(MNIST_PATH, train=False, transform = PIL_to_Tensor)
 mnist_test_dataloader = torch.utils.data.DataLoader(mnist_test_dataset, 
-                                                     batch_size=batch_size, 
+                                                     batch_size=int(batch_size/4), 
                                                      shuffle=False, num_workers=0)
 
 training_iterator = iter(mnist_train_dataloader)
@@ -78,7 +78,7 @@ cross_entropy_loss = nn.CrossEntropyLoss()
 optimizer = optim.SGD(small_conv_net.parameters(), lr=0.001, momentum=0.9)
 scheduler = StepLR(optimizer, step_size=10, gamma=0.5)
 
-for epoch in range(30):
+for epoch in range(1):
     running_loss = 0.0
     for train_batch_index, train_batch_tuple in enumerate(mnist_train_dataloader):
         images, labels = train_batch_tuple
@@ -125,6 +125,31 @@ small_conv_net = SmallConvNet().to(main_device)
 small_conv_net.load_state_dict(torch.load(MODEL_SAVE_PATH, weights_only=True))
 # re load the model for practice
 
+# Visualize predictions on one test batch
+test_batch_iterator = iter(mnist_test_dataloader)
+test_images, test_labels = next(test_batch_iterator)
 
+# Get predictions
+small_conv_net.eval()
+with torch.no_grad():
+    test_images_device = test_images.to(main_device)
+    logits = small_conv_net(test_images_device)
+    _, predictions = torch.max(logits, dim=1)
+    predictions = predictions.cpu()
 
-    
+# Create visualization
+fig, axes = plt.subplots(1, len(test_images), figsize=(15, 2))
+for idx in range(len(test_images)):
+    ax = axes[idx] if len(test_images) > 1 else axes
+    img = test_images[idx].squeeze()
+    ax.imshow(img, cmap='gray')
+    ax.axis('off')
+    actual = test_labels[idx].item()
+    predicted = predictions[idx].item()
+    color = 'green' if actual == predicted else 'red'
+    ax.set_title(f'A:{actual}\nP:{predicted}', fontsize=10, color=color)
+
+plt.suptitle('Test Batch Predictions (Green=Correct, Red=Incorrect)', fontsize=12)
+plt.tight_layout()
+plt.show()
+
