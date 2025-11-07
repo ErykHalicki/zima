@@ -4,7 +4,7 @@ class Controller:
     def __init__(self):
         self.left_speed = 0.0
         self.right_speed = 0.0
-        self.max_speed = 1.0
+        self.max_speed = 0.5
 
     def update(self, model, data):
         """Update the robot control based on current state."""
@@ -36,3 +36,6 @@ class Controller:
     def stop(self):
         self.left_speed = 0.0
         self.right_speed = 0.0
+
+    def get_normalized_speeds(self):
+        return np.array([self.left_speed/self.max_speed, self.right_speed/self.max_speed], dtype="float32")

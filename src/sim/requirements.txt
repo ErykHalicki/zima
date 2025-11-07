@@ -2,3 +2,4 @@ mujoco
 numpy
 opencv-python
 pynput
+h5py
