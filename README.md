@@ -4,10 +4,11 @@ Zima is a low-cost rover with a 5DOF arm. Designed as a personal research platfo
 
 <img src="https://github.com/user-attachments/assets/a8970ae2-b656-4fd7-85b0-6ae1a3be184e" width="400">
 
-## Current Work
-Training end-to-end visuomotor policies for:
-- Object detection and approach
-- Pick-and-place tasks
+## Current Status
+- ✅ Hardware prototype operational (5-DOF arm + differential drive base)
+- ✅ ROS2 control stack deployed on Raspberry Pi 5
+- ✅ MuJoCo simulation with teleoperation and data collection
+- 🔄 Training vision-based navigation policies (ResNet→action network)
 
 ## Repository Structure
 - `src/sim/` - MuJoCo simulation environment
