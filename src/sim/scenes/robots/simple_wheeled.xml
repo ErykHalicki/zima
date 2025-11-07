@@ -1,0 +1,67 @@
+<mujoco model="simple_differential_drive">
+  <compiler angle="radian"/>
+
+  <default>
+    <default class="wheel">
+      <geom type="cylinder" size="0.034 0.013" friction="2 0.005 0.0001" contype="1" conaffinity="1" mass="0.032"/>
+      <joint type="hinge" frictionloss="0.001" damping="0.01" armature="0.01" limited="false"/>
+    </default>
+    <default class="idler_wheel">
+      <geom type="cylinder" size="0.020 0.010" friction="2 0.005 0.0001" contype="1" conaffinity="1" mass="0.015"/>
+      <joint type="hinge" frictionloss="0.001" damping="0.005" armature="0.001" limited="false"/>
+    </default>
+  </default>
+
+  <worldbody>
+    <body name="robot_body" pos="0 0 0.068">
+      <joint type="free"/>
+      <camera name="robot_third_person" mode="fixed" pos="-0.5 0 0.5" xyaxes="0 -1 0 0.707 0 0.707"/>
+      <camera name="robot_first_person" mode="fixed" pos="0.05 0 -0.02" euler="0 1.571 1.571"/>
+
+      <!-- Main body box -->
+      <geom name="body_geom" type="box" size="0.05 0.05 0.05" pos="0 0 0" mass="1.0"/>
+      <inertial pos="0 0 0" mass="1.0" diaginertia="0.001 0.001 0.001"/>
+
+      <!-- Left wheel -->
+      <body name="wheel_l" pos="0 0.065 -0.035">
+        <joint class="wheel" name="wheel_l_throttle" axis="0 1 0"/>
+        <geom class="wheel" quat="0.707107 0.707107 0 0" material="wheel_material"/>
+      </body>
+
+      <!-- Right wheel -->
+      <body name="wheel_r" pos="0 -0.065 -0.035">
+        <joint class="wheel" name="wheel_r_throttle" axis="0 1 0"/>
+        <geom class="wheel" quat="0.707107 0.707107 0 0" material="wheel_material"/>
+      </body>
+
+      <!-- Front left idler wheel -->
+      <body name="wheel_fl_idler" pos="0.055 0.055 -0.048">
+        <joint class="idler_wheel" name="wheel_fl_idler_joint" axis="0 1 0"/>
+        <geom class="idler_wheel" quat="0.707107 0.707107 0 0" material="wheel_material"/>
+      </body>
+
+      <!-- Front right idler wheel -->
+      <body name="wheel_fr_idler" pos="0.055 -0.055 -0.048">
+        <joint class="idler_wheel" name="wheel_fr_idler_joint" axis="0 1 0"/>
+        <geom class="idler_wheel" quat="0.707107 0.707107 0 0" material="wheel_material"/>
+      </body>
+
+      <!-- Rear left idler wheel -->
+      <body name="wheel_bl_idler" pos="-0.055 0.055 -0.048">
+        <joint class="idler_wheel" name="wheel_bl_idler_joint" axis="0 1 0"/>
+        <geom class="idler_wheel" quat="0.707107 0.707107 0 0" material="wheel_material"/>
+      </body>
+
+      <!-- Rear right idler wheel -->
+      <body name="wheel_br_idler" pos="-0.055 -0.055 -0.048">
+        <joint class="idler_wheel" name="wheel_br_idler_joint" axis="0 1 0"/>
+        <geom class="idler_wheel" quat="0.707107 0.707107 0 0" material="wheel_material"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <velocity kv="100" gear="0.04" forcelimited="true" forcerange="-50 50" name="motor_l_wheel" joint="wheel_l_throttle"/>
+    <velocity kv="100" gear="0.04" forcelimited="true" forcerange="-50 50" name="motor_r_wheel" joint="wheel_r_throttle"/>
+  </actuator>
+</mujoco>
