@@ -1,25 +1,27 @@
-# Zima: Low Cost Robotic Manipulation Platform
+# Zima: End-to-End Control Platform for Robotic Manipulation
 
-## Project Overview
-
-Zima is a low-cost autonomous robotic rover designed as a personal research platform for developing and testing end-to-end neural networks in robotic manipulation tasks. Mainly done to allow me to test VLA fine tuning and implementation, neural network based inverse kinematics, online RL training, and anything else that piques my interest.
+Zima is a low-cost rover with a 5DOF arm. Designed as a personal research platform for developing and testing end-to-end neural networks in robotic manipulation and navigation tasks.
 
 <img src="https://github.com/user-attachments/assets/a8970ae2-b656-4fd7-85b0-6ae1a3be184e" width="400">
 
+## Current Work
+Training end-to-end visuomotor policies for:
+- Object detection and approach
+- Pick-and-place tasks
 
-## Current Development Focus
-- SmolVLA model adaptation
+## Repository Structure
+- `src/sim/` - MuJoCo simulation environment
+- `src/ml/` - Neural network policies and training code
+- `src/zima_ros2/` - ROS2 hardware interface
+- `src/firmware/` - ESP32 motor control firmware
 
-## Current System Architecture
+## Hardware
+- 5-DOF custom robotic arm (4x MG996R servo joints, 1x gripper)
+- Differential drive base (modified Recon 6.0 Rover chassis)
+- Dual camera setup: wrist-mounted + front-facing RGB
+- ESP32 for low-level motor control
+- Raspberry Pi 5 for vision processing and policy execution
 
-### Hardware Components
-- Custom Articulated robotic arm
-- Tracked mobile base (hacked from Recon 6.0 Rover Toy)
-- ESP32 microcontroller
-- Raspberry Pi 5 as primary computer
-
-### Software Stack
-- ROS2 framework
-- PyTorch for neural network development
-- Custom hardware interface
+## Tech Stack
+ROS2 Jazzy | PyTorch | MuJoCo | ESP-IDF
 
