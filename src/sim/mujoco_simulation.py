@@ -59,7 +59,7 @@ episode_data = {"images": [], "actions": []}
 save_episode = False
 discard_episode = False
 reset_episode = True
-box_spawn_range = 2 
+box_spawn_range = 1.25 
 
 def _on_press(key):
     global save_episode
