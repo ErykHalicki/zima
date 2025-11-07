@@ -1,2 +1,4 @@
 mujoco
 numpy
+opencv-python
+pynput

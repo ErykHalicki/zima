@@ -2,7 +2,7 @@
   <compiler angle="radian"/>
   <option timestep="0.0005"/>
 
-  <include file="robots/simple_wheeled.xml"/>
+  <include file="robots/zima.xml"/>
 
   <statistic center="0 0 0.1" extent="0.8"/>
 
@@ -25,6 +25,11 @@
   <worldbody>
     <light pos="0 0 3" dir="0 0 -1" directional="true" diffuse="0.8 0.8 0.8" specular="0.2 0.2 0.2"/>
     <geom name="floor" size="0 0 0.05" pos="0 0 -0.1" type="plane" material="groundplane"/>
+    <body name="orange_box" pos="0.2 0.2 0.05">
+      <freejoint/>
+      <inertial pos="0 0 0" mass="0.1" diaginertia="0.00016667 0.00016667 0.00016667"/>
+      <geom type="box" size="0.05 0.05 0.05" rgba="1 0.5 0 1"/>
+    </body>
   </worldbody>
 
 </mujoco>
