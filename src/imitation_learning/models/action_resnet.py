@@ -19,7 +19,7 @@ class ActionResNet(nn.Module):
 
     def forward(self, x):
         #need to transform image to 224x224
-        features = nn.Flatten(self.feature_extractor(x))
+        features = torch.flatten(self.feature_extractor(x), start_dim=1)
         actions = self.action_head(features)
         return actions
 

@@ -12,6 +12,7 @@ from models.action_resnet import ActionResNet
 from datasets.zima_torch_dataset import ZimaTorchDataset
 import time
 import cv2
+from tqdm import tqdm
 
 transform = v2.Compose([
     v2.ToImage(), # numpy [H,W,C] -> tensor [C,H,W]
@@ -53,9 +54,9 @@ def visualize_image(image_tensor):
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 print(f"Using {device} device")
 
-full_dataset = ZimaTorchDataset(file_path="datasets/data/output.hdf5", 
+full_dataset = ZimaTorchDataset(file_path="datasets/data/small.hdf5", 
                                 sample_transform=sample_transform,
-                                max_cached_episodes=30)
+                                max_cached_episodes=75)
 
 train_size = int(0.8 * len(full_dataset))
 test_size = len(full_dataset) - train_size
@@ -66,26 +67,33 @@ train_dataset, test_dataset = random_split(
     generator=torch.Generator().manual_seed(514)
 )
 
-train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True, pin_memory = True, persistent_workers=True)
 test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
 sample_images = next(iter(train_dataloader))["images"].to(device)
 
 visualize_image(torchvision.utils.make_grid(sample_images))
-'''
+
 model = ActionResNet().to(device)
-loss = nn.MSELoss()
+mse_loss = nn.MSELoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-for batch in train_dataloader:
-    data_time = time.time()
+batch_start = time.time()
+pbar = tqdm(train_dataloader, desc="Training")
+for batch in pbar:
+    
+    images = batch["images"].to(device)
+    actions = batch["actions"].to(device)
         
+    data_time = time.time()
+    
     optimizer.zero_grad()
-    loss = model(batch)
+    loss = mse_loss(model(images), actions)
     loss.backward()
     optimizer.step()
-        
     train_time = time.time()
-    print(f"Data: {data_time - batch_start:.2f}s, Train: {train_time - data_time:.2f}s")
+    
+    pbar.set_postfix({"loss": f"{loss.item():.4f}"})
     batch_start = time.time()
-'''
+
+
