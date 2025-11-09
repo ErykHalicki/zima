@@ -67,7 +67,7 @@ train_dataset, test_dataset = random_split(
     generator=torch.Generator().manual_seed(514)
 )
 
-train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True, pin_memory = True, persistent_workers=True)
+train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True, pin_memory = True)
 test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
 sample_images = next(iter(train_dataloader))["images"].to(device)
@@ -78,22 +78,62 @@ model = ActionResNet().to(device)
 mse_loss = nn.MSELoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-batch_start = time.time()
-pbar = tqdm(train_dataloader, desc="Training")
-for batch in pbar:
-    
-    images = batch["images"].to(device)
-    actions = batch["actions"].to(device)
-        
-    data_time = time.time()
-    
-    optimizer.zero_grad()
-    loss = mse_loss(model(images), actions)
-    loss.backward()
-    optimizer.step()
-    train_time = time.time()
-    
-    pbar.set_postfix({"loss": f"{loss.item():.4f}"})
+num_epochs = 4
+
+batch_losses = []
+test_batch_losses = []
+for epoch in range(num_epochs):
+    test_pbar = tqdm(test_dataloader, desc=f"Test {epoch+1}/{num_epochs}")
+    epoch_test_losses = []
+    for batch in test_pbar:
+        images = batch["images"].to(device)
+        actions = batch["actions"].to(device)
+        with torch.no_grad():
+            loss = mse_loss(model(images), actions)
+        test_loss = loss.item()
+        epoch_test_losses.append(test_loss)
+        test_pbar.set_postfix({"loss": f"{test_loss:.4f}"})
+
+    avg_loss = np.mean(epoch_test_losses)
+    print(f"Epoch {epoch+1}/{num_epochs} - Average Test Loss: {avg_loss:.4f}")
+    test_batch_losses.append(avg_loss)
+
     batch_start = time.time()
+    pbar = tqdm(train_dataloader, desc=f"Epoch {epoch+1}/{num_epochs}")
+    for batch in pbar:
 
+        images = batch["images"].to(device)
+        actions = batch["actions"].to(device)
 
+        data_time = time.time()
+
+        optimizer.zero_grad()
+        loss = mse_loss(model(images), actions)
+        loss.backward()
+        optimizer.step()
+        train_time = time.time()
+
+        batch_losses.append(loss.item())
+
+        pbar.set_postfix({"loss": f"{loss.item():.4f}"})
+        batch_start = time.time()
+
+plt.figure(figsize=(12, 6))
+plt.subplot(1, 2, 1)
+plt.plot(batch_losses, label='Training Loss')
+plt.xlabel('Batch')
+plt.ylabel('Loss')
+plt.title('Training Loss')
+plt.legend()
+plt.grid(True)
+
+plt.subplot(1, 2, 2)
+plt.plot(test_batch_losses, label='Test Loss', color='orange')
+plt.xlabel('epoch')
+plt.ylabel('Loss')
+plt.title('Test Loss')
+plt.legend()
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()
