@@ -2,9 +2,10 @@ from .zima_dataset import ZimaDataset
 from torch.utils.data import Dataset
 import numpy as np
 import bisect
+import time
 
 class ZimaTorchDataset(ZimaDataset, Dataset):
-    def __init__(self, file_path, sample_transform=None, max_cached_episodes=10):
+    def __init__(self, file_path, sample_transform=None, max_cached_episodes=5):
         '''
         file_path: path to hdf5 Dataset
         sample_transform: transform function that takes in a sample dict 
@@ -22,7 +23,7 @@ class ZimaTorchDataset(ZimaDataset, Dataset):
 
         self._episode_cache = {}
         self._cache_order = []
-
+        
     def __len__(self):
         return self.episode_boundaries[-1]
 
@@ -30,9 +31,12 @@ class ZimaTorchDataset(ZimaDataset, Dataset):
         if episode_num in self._episode_cache:
             self._cache_order.remove(episode_num)
             self._cache_order.append(episode_num)
+            #print("cache hit!")
             return self._episode_cache[episode_num]
-
+        
+        start = time.time()
         episode = self.read_episode(episode_num)
+        #print(f"episode read took {time.time()-start}")
 
         self._episode_cache[episode_num] = episode
         self._cache_order.append(episode_num)
@@ -49,7 +53,9 @@ class ZimaTorchDataset(ZimaDataset, Dataset):
 
         episode = self._get_cached_episode(episode_num)
 
-        sample = {key: episode[key][idx_in_episode] for key in episode}
+        sample = {key: episode[key][idx_in_episode].copy() for key in episode}
+        # this sample of numpy arrays automatically gets turned into properly sized batch tensors!!!
+        # SO COOL
     
         if self.sample_transform:
             sample=self.sample_transform(sample)
