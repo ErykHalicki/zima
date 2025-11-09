@@ -11,8 +11,7 @@ Zima is a low-cost rover with a 5DOF arm. Designed as a personal research platfo
 - 🔄 Training vision-based navigation policies (ResNet→action network)
 
 ## Repository Structure
-- `src/sim/` - MuJoCo simulation environment
-- `src/ml/` - Neural network policies and training code
+- `src/imitation_learning` - Model definitions and training scripts, Mujoco simulation
 - `src/zima_ros2/` - ROS2 hardware interface
 - `src/firmware/` - ESP32 motor control firmware
 

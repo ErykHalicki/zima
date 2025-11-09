@@ -1,4 +1,4 @@
-from controller import Controller
+from .controller import Controller
 from pynput import keyboard
 
 class KeyboardController(Controller):

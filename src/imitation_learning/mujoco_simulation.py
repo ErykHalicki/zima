@@ -3,11 +3,11 @@ import mujoco.viewer
 import numpy as np
 import cv2
 import time
-from keyboard_controller import KeyboardController
-from zima_dataset import ZimaDataset
+from sim.keyboard_controller import KeyboardController
+from datasets.zima_dataset import ZimaDataset
 from pynput import keyboard
 
-model = mujoco.MjModel.from_xml_path("scenes/simple_scene.xml")
+model = mujoco.MjModel.from_xml_path("sim/scenes/simple_scene.xml")
 
 mjdata = mujoco.MjData(model)
 
@@ -52,7 +52,7 @@ def move_item_random(item_name, min_coords, max_coords):
     z = np.random.uniform(min_coords[2], max_coords[2])
     move_item(item_name, x, y, z)
 
-dataset = ZimaDataset("test_dataset.hdf5")
+dataset = ZimaDataset("datasets/data/green_cube_navigation.hdf5")
 controller = KeyboardController()
 
 episode_data = {"images": [], "actions": []}
