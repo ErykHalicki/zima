@@ -79,7 +79,7 @@ ground_truth_variances = []
 best_test_loss = 1000.0
 
 MODEL_SAVE_PATH = "models/weights/"
-MODEL_NAME = "action_resnet"
+MODEL_NAME = "action_resnet_FROZEN_BACKBONE"
 for epoch in range(num_epochs):
     test_pbar = tqdm(test_dataloader, desc=f"Test {epoch+1}/{num_epochs}")
     batch_test_losses = []

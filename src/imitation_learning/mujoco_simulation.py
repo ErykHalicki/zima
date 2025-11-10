@@ -61,7 +61,7 @@ train_mode = False
 dataset = ZimaDataset("datasets/data/green_cube_navigation.hdf5")
 controller = KeyboardController()
 if not train_mode:
-    controller = NNController("models/weights/action_resnet.pt")
+    controller = NNController("models/weights/action_resnet_best.pt")
 
 episode_data = {"images": [], "actions": []}
 save_episode = False
@@ -73,16 +73,15 @@ def _on_press(key):
     global save_episode
     global discard_episode
     try:
-        if key.char == 'o':
+        if key.char == 'o' and train_mode:
             save_episode = True
         if key.char == 'p':
             discard_episode = True
     except AttributeError:
         pass
 
-if train_mode:
-    listener = keyboard.Listener(on_press=_on_press)
-    listener.start()
+listener = keyboard.Listener(on_press=_on_press)
+listener.start()
 
 with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_ui=False) as viewer:
     while viewer.is_running():

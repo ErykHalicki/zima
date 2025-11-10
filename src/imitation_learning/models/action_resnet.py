@@ -17,8 +17,8 @@ class ActionResNet(nn.Module):
     def __init__(self):
         super().__init__()
         resnet = torchvision.models.resnet18(weights='DEFAULT')
-        #for param in resnet.parameters():
-            #param.requires_grad = False
+        for param in resnet.parameters():
+            param.requires_grad = False
 
         self.feature_extractor = nn.Sequential(*list(resnet.children())[:-1])
 
