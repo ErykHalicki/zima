@@ -5,7 +5,7 @@ import bisect
 import time
 
 class ZimaTorchDataset(ZimaDataset, Dataset):
-    def __init__(self, file_path, sample_transform=None, max_cached_episodes=5):
+    def __init__(self, file_path, sample_transform=None, max_cached_episodes=5, max_cached_images=10000):
         '''
         file_path: path to hdf5 Dataset
         sample_transform: transform function that takes in a sample dict 
@@ -23,6 +23,10 @@ class ZimaTorchDataset(ZimaDataset, Dataset):
 
         self._episode_cache = {}
         self._cache_order = []
+
+        self._transform_cache = {}
+        self._transform_cache_order = []
+        self.max_cached_transforms = max_cached_images 
         
     def __len__(self):
         return self.episode_boundaries[-1]
@@ -48,17 +52,27 @@ class ZimaTorchDataset(ZimaDataset, Dataset):
         return episode
 
     def __getitem__(self, idx):
+        if idx in self._transform_cache:
+            self._transform_cache_order.remove(idx)
+            self._transform_cache_order.append(idx)
+            return self._transform_cache[idx]
+
         episode_num = bisect.bisect_right(self.episode_boundaries, idx) - 1
         idx_in_episode = idx - self.episode_boundaries[episode_num]
 
         episode = self._get_cached_episode(episode_num)
 
         sample = {key: episode[key][idx_in_episode].copy() for key in episode}
-        # this sample of numpy arrays automatically gets turned into properly sized batch tensors!!!
-        # SO COOL
-    
+
         if self.sample_transform:
-            sample=self.sample_transform(sample)
+            sample = self.sample_transform(sample)
+
+        self._transform_cache[idx] = sample
+        self._transform_cache_order.append(idx)
+
+        if len(self._transform_cache) > self.max_cached_transforms:
+            oldest = self._transform_cache_order.pop(0)
+            del self._transform_cache[oldest]
 
         return sample
 

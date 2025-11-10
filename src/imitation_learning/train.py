@@ -46,15 +46,16 @@ print(f"Using {device} device")
 
 full_dataset = ZimaTorchDataset(file_path="datasets/data/small.hdf5", 
                                 sample_transform=sample_transform,
-                                max_cached_episodes=75)
+                                max_cached_episodes=10,
+                                max_cached_images = 20000)
 
-train_size = int(0.8 * len(full_dataset))
+train_size = int(0.7 * len(full_dataset))
 test_size = len(full_dataset) - train_size
 
 train_dataset, test_dataset = random_split(
     full_dataset, 
     [train_size, test_size],
-    generator=torch.Generator().manual_seed(514)
+    generator=torch.Generator().manual_seed(420)
 )
 
 train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True, pin_memory = True)
@@ -69,14 +70,19 @@ mse_loss = nn.MSELoss()
 optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
 
-num_epochs = 40
+num_epochs = 30
 
 batch_losses = []
-test_batch_losses = []
+epoch_test_losses = []
+prediction_variances = []
+ground_truth_variances = []
+best_test_loss = 1000.0
+
+MODEL_SAVE_PATH = "models/weights/"
+MODEL_NAME = "action_resnet"
 for epoch in range(num_epochs):
     test_pbar = tqdm(test_dataloader, desc=f"Test {epoch+1}/{num_epochs}")
-    epoch_test_losses = []
-    output_variance = []
+    batch_test_losses = []
     for batch in test_pbar:
         images = batch["images"].to(device)
         actions = batch["actions"].to(device)
@@ -85,44 +91,52 @@ for epoch in range(num_epochs):
         with torch.no_grad():
             loss = mse_loss(model(images), actions)
         test_loss = loss.item()
-        epoch_test_losses.append(test_loss)
+        batch_test_losses.append(test_loss)
         test_pbar.set_postfix({"loss": f"{test_loss:.4f}"})
 
-    avg_loss = np.mean(epoch_test_losses)
+    avg_loss = np.mean(batch_test_losses)
     print(f"Epoch {epoch+1}/{num_epochs} - Average Test Loss: {avg_loss:.4f}")
-    test_batch_losses.append(avg_loss)
+    epoch_test_losses.append(avg_loss)
+    if avg_loss <= best_test_loss:
+        torch.save(model.state_dict(), MODEL_SAVE_PATH+MODEL_NAME+"_best.pt")
+        best_test_loss = avg_loss
 
     batch_start = time.time()
     pbar = tqdm(train_dataloader, desc=f"Epoch {epoch+1}/{num_epochs}")
+    
+    model.train()
     for batch in pbar:
 
         images = batch["images"].to(device)
         actions = batch["actions"].to(device)
-
+        action_variance = torch.var(actions).cpu()
+        ground_truth_variances.append(action_variance)
 
         data_time = time.time()
         
-        model.train()
         optimizer.zero_grad()
         predictions = model(images)
-        prediction_variance = torch.var(predictions).cpu()
+        prediction_variance = torch.var(predictions.detach()).cpu()
+        prediction_variances.append(prediction_variance)
         loss = mse_loss(predictions, actions)
         loss.backward()
         optimizer.step()
         train_time = time.time()
 
         batch_losses.append(loss.item())
-
-        pbar.set_postfix({"loss": f"{loss.item():.4f}"})
+        
+        postfix_dict = {"loss": f'{loss.item():.4f}', 
+                        "data_time": f"{(data_time-batch_start):.2f}", 
+                        "train_time": f"{(train_time-data_time):.2f}"}
+        pbar.set_postfix(postfix_dict)
         batch_start = time.time()
 
     scheduler.step()
+    torch.save(model.state_dict(), MODEL_SAVE_PATH+MODEL_NAME+"_latest.pt")
 
-MODEL_SAVE_PATH = "models/weights/action_resnet.pt"
-torch.save(model.state_dict(), MODEL_SAVE_PATH)
+plt.figure(figsize=(15, 5))
 
-plt.figure(figsize=(12, 6))
-plt.subplot(1, 2, 1)
+plt.subplot(1, 3, 1)
 plt.plot(batch_losses, label='Training Loss')
 plt.xlabel('Batch')
 plt.ylabel('Loss')
@@ -130,11 +144,20 @@ plt.title('Training Loss')
 plt.legend()
 plt.grid(True)
 
-plt.subplot(1, 2, 2)
-plt.plot(test_batch_losses, label='Test Loss', color='orange')
-plt.xlabel('epoch')
+plt.subplot(1, 3, 2)
+plt.plot(epoch_test_losses, label='Test Loss', color='orange')
+plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.title('Test Loss')
+plt.legend()
+plt.grid(True)
+
+plt.subplot(1, 3, 3)
+plt.plot(prediction_variances, label='Prediction Variance', color='green', alpha=0.7)
+plt.plot(ground_truth_variances, label='Ground Truth Variance', color='red', alpha=0.7)
+plt.xlabel('Batch')
+plt.ylabel('Variance')
+plt.title('Prediction vs Ground Truth Variance')
 plt.legend()
 plt.grid(True)
 
