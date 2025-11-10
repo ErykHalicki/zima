@@ -4,8 +4,11 @@ import numpy as np
 import cv2
 import time
 from sim.keyboard_controller import KeyboardController
+from sim.nn_controller import NNController
 from datasets.zima_dataset import ZimaDataset
 from pynput import keyboard
+import sys
+sys.path.append(".")#hack to use all packages in this directory
 
 model = mujoco.MjModel.from_xml_path("sim/scenes/simple_scene.xml")
 
@@ -52,8 +55,13 @@ def move_item_random(item_name, min_coords, max_coords):
     z = np.random.uniform(min_coords[2], max_coords[2])
     move_item(item_name, x, y, z)
 
+
+train_mode = False
+
 dataset = ZimaDataset("datasets/data/green_cube_navigation.hdf5")
 controller = KeyboardController()
+if not train_mode:
+    controller = NNController("models/weights/action_resnet.pt")
 
 episode_data = {"images": [], "actions": []}
 save_episode = False
@@ -72,8 +80,9 @@ def _on_press(key):
     except AttributeError:
         pass
 
-listener = keyboard.Listener(on_press=_on_press)
-listener.start()
+if train_mode:
+    listener = keyboard.Listener(on_press=_on_press)
+    listener.start()
 
 with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_ui=False) as viewer:
     while viewer.is_running():
@@ -85,8 +94,8 @@ with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_
             reset_episode = False
 
         step_start = time.time()
-
-        controller.update(model, mjdata)
+        if train_mode:
+            controller.update(model, mjdata)
         mujoco.mj_step(model, mjdata)
         viewer.sync()
 
@@ -94,6 +103,10 @@ with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_
             renderer.update_scene(mjdata, camera="front_camera")
             rgb_array = renderer.render()
             bgr_array = cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR)
+            
+            if not train_mode:
+                controller.update(model,mjdata, rgb_array)
+
             cv2.imshow("zima front camera", bgr_array)
             cv2.waitKey(1)
             last_capture_time = mjdata.time

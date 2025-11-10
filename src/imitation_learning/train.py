@@ -1,6 +1,5 @@
 import torch
 import torchvision
-from torchvision.transforms import v2
 import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
@@ -13,16 +12,7 @@ from datasets.zima_torch_dataset import ZimaTorchDataset
 import time
 import cv2
 from tqdm import tqdm
-
-transform = v2.Compose([
-    v2.ToImage(), # numpy [H,W,C] -> tensor [C,H,W]
-    v2.ToDtype(torch.float32, scale=True),  # convert to float and normalize to [0,1]
-    v2.Resize((224, 224), antialias=True),
-    v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    # standardize using ImageNet stats
-    # (0,1) -> (-2,2)
-    # helps gradient flow if centered around 0
-])
+from torch.optim.lr_scheduler import StepLR
 
 def sample_transform(sample):
     '''
@@ -30,7 +20,7 @@ def sample_transform(sample):
     Transforms image from sample to resnet format
     '''
     rgb_image = cv2.cvtColor(sample["images"], cv2.COLOR_BGR2RGB)
-    sample["images"] = transform(rgb_image)
+    sample["images"] = ActionResNet.convert_image_to_resnet(rgb_image)
     return sample
 
 def visualize_image(image_tensor):
@@ -76,18 +66,22 @@ visualize_image(torchvision.utils.make_grid(sample_images))
 
 model = ActionResNet().to(device)
 mse_loss = nn.MSELoss()
-optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
 
-num_epochs = 4
+num_epochs = 40
 
 batch_losses = []
 test_batch_losses = []
 for epoch in range(num_epochs):
     test_pbar = tqdm(test_dataloader, desc=f"Test {epoch+1}/{num_epochs}")
     epoch_test_losses = []
+    output_variance = []
     for batch in test_pbar:
         images = batch["images"].to(device)
         actions = batch["actions"].to(device)
+        
+        model.eval()
         with torch.no_grad():
             loss = mse_loss(model(images), actions)
         test_loss = loss.item()
@@ -105,10 +99,14 @@ for epoch in range(num_epochs):
         images = batch["images"].to(device)
         actions = batch["actions"].to(device)
 
-        data_time = time.time()
 
+        data_time = time.time()
+        
+        model.train()
         optimizer.zero_grad()
-        loss = mse_loss(model(images), actions)
+        predictions = model(images)
+        prediction_variance = torch.var(predictions).cpu()
+        loss = mse_loss(predictions, actions)
         loss.backward()
         optimizer.step()
         train_time = time.time()
@@ -117,6 +115,11 @@ for epoch in range(num_epochs):
 
         pbar.set_postfix({"loss": f"{loss.item():.4f}"})
         batch_start = time.time()
+
+    scheduler.step()
+
+MODEL_SAVE_PATH = "models/weights/action_resnet.pt"
+torch.save(model.state_dict(), MODEL_SAVE_PATH)
 
 plt.figure(figsize=(12, 6))
 plt.subplot(1, 2, 1)
