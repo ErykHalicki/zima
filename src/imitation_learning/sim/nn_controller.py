@@ -19,10 +19,21 @@ class NNController(Controller):
         action_history_tensor = torch.tensor(action_history, dtype=torch.float32).unsqueeze(0).to(self.device)
         action_chunk = self.model(input_batch, action_history_tensor)
 
-        action_chunk = action_chunk.clone().detach().cpu()
-
+        action_chunk = torch.argmax(action_chunk.detach().cpu(), dim=2)
         print(action_chunk)
-        self.left_speed = action_chunk[0][0][0]*self.max_speed
-        self.right_speed = action_chunk[0][0][1]*self.max_speed
+        next_action = action_chunk[0][0].item()  # Get first action from chunk
+
+        # Execute action based on class: 0=stop, 1=forward, 2=backward, 3=right, 4=left
+        if next_action == 0:
+            self.stop()
+        elif next_action == 1:
+            self.forward()
+        elif next_action == 2:
+            self.backward()
+        elif next_action == 3:
+            self.turn_right()
+        elif next_action == 4:
+            self.turn_left()
+
         super().update(mjmodel, mjdata)
 

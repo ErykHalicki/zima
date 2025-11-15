@@ -55,3 +55,10 @@ class ZimaDataset:
                 return episode
         else:
             raise Exception(f"Invalid episode_num: {episode_num}. There are only {self.num_episodes} episodes in the dataset!")
+
+    def read_specific_key(self, episode_num, key):
+        if episode_num < self.num_episodes:
+            with h5py.File(self.file_path, 'r') as f:
+                return f[f"episode_{episode_num}"][key][:]
+        else:
+            raise Exception(f"Invalid episode_num: {episode_num}. There are only {self.num_episodes} episodes in the dataset!")

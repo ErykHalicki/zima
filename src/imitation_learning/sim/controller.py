@@ -5,6 +5,7 @@ class Controller:
         self.left_speed = 0.0
         self.right_speed = 0.0
         self.max_speed = 0.5
+        self.turning_speed = 0.175
 
     def update(self, model, data):
         """Update the robot control based on current state."""
@@ -18,20 +19,20 @@ class Controller:
             data.actuator('motor_r_wheel').ctrl = self.right_speed
 
     def forward(self):
-        self.left_speed += self.max_speed
-        self.right_speed += self.max_speed
+        self.left_speed = self.max_speed
+        self.right_speed = self.max_speed
 
     def backward(self):
-        self.left_speed += -self.max_speed
-        self.right_speed += -self.max_speed
+        self.left_speed = -self.max_speed
+        self.right_speed = -self.max_speed
 
     def turn_left(self):
-        self.left_speed += -self.max_speed * 0.5
-        self.right_speed += self.max_speed * 0.5
+        self.left_speed = -self.turning_speed
+        self.right_speed = self.turning_speed
 
     def turn_right(self):
-        self.left_speed += self.max_speed * 0.5
-        self.right_speed += -self.max_speed * 0.5
+        self.left_speed = self.turning_speed 
+        self.right_speed = -self.turning_speed
 
     def stop(self):
         self.left_speed = 0.0

@@ -2,7 +2,7 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 
-dataset_path = "datasets/data/compressed.hdf5"
+dataset_path = "datasets/data/orange_compressed.hdf5"
 
 all_actions = []
 

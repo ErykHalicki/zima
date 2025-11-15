@@ -21,6 +21,13 @@ def sample_transform(sample):
     '''
     rgb_image = cv2.cvtColor(sample["image"], cv2.COLOR_BGR2RGB)
     sample["image"] = ActionResNet.convert_image_to_resnet(rgb_image)
+
+    # bin all actions (action chunk and action history) into 1 of 5 classes (forward left right backward stop)
+    # action_history shape: [history_size, 2] -> [history_size, 5] (one-hot)
+    # action_chunk shape: [chunk_size, 2] -> [chunk_size, 1] (class index)
+    sample["action_history"] = np.array([ActionResNet.bin_action(action) for action in sample["action_history"]], dtype=np.float32)
+    sample["action_chunk"] = np.array([np.argmax(ActionResNet.bin_action(action)) for action in sample["action_chunk"]], dtype=np.int64)
+
     return sample
 
 def visualize_image(image_tensor):
@@ -44,9 +51,9 @@ def visualize_image(image_tensor):
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 print(f"Using {device} device")
 
-ACTION_CHUNK_SIZE = 30
-ACTION_HISTORY_SIZE = 30
-ACTION_SIZE = 2
+ACTION_CHUNK_SIZE = 10
+ACTION_HISTORY_SIZE = 4
+ACTION_SIZE = 5
 
 full_dataset = ZimaTorchDataset(file_path="datasets/data/compressed.hdf5", 
                                 sample_transform=sample_transform,
@@ -71,9 +78,25 @@ sample_images = next(iter(train_dataloader))["image"].to(device)
 
 visualize_image(torchvision.utils.make_grid(sample_images))
 
+all_actions = []
+for i in range(full_dataset.num_episodes):
+    episode_actions = full_dataset.read_specific_key(i,"actions")
+    binned_actions = np.array([np.argmax(ActionResNet.bin_action(action)) for action in episode_actions], dtype=np.int64)
+    all_actions.append(binned_actions)
+
+all_actions = np.concatenate(all_actions, axis=0)
+unique, counts = np.unique(all_actions, axis=0, return_counts=True)
+class_weights = []
+
+for action, count in zip(unique, counts):
+    print(f"action {action}: {count} ({100*count/len(all_actions):.1f}%) of data")
+    class_weights.append(np.min([len(all_actions)/count,20.0]))
+
+class_weights = torch.from_numpy(np.array(class_weights, dtype=np.float32)).to(device)
+print(f"class weights: {class_weights}")
 
 model = ActionResNet(ACTION_CHUNK_SIZE, ACTION_HISTORY_SIZE, ACTION_SIZE).to(device)
-loss_criterion = nn.SmoothL1Loss()
+loss_criterion = nn.CrossEntropyLoss(weight=class_weights)
 
 optimizer = optim.AdamW([
     {'params': model.feature_extractor.parameters(), 'lr': 1e-4},      # pretrained, small updates
@@ -107,18 +130,20 @@ for epoch in range(num_epochs):
         action_histories = batch["action_history"].to(device)
         action_chunks = batch["action_chunk"].to(device)
 
-        action_variance = torch.var(action_chunks).cpu()
-        ground_truth_variances.append(action_variance)
+        #action_variance = torch.var(action_chunks).cpu()
+        #ground_truth_variances.append(action_variance)
 
         data_time = time.time()
         
         optimizer.zero_grad()
         predictions = model(images, action_histories)
 
-        prediction_variance = torch.var(predictions.detach()).cpu()
-        prediction_variances.append(prediction_variance)
-
-        loss = loss_criterion(predictions, action_chunks)
+        #prediction_variance = torch.var(predictions.detach()).cpu()
+        #prediction_variances.append(prediction_variance)
+        
+        logits_flat = predictions.view(-1, ACTION_SIZE)
+        targets_flat = action_chunks.view(-1)
+        loss = loss_criterion(logits_flat, targets_flat)
         loss.backward()
         optimizer.step()
         train_time = time.time()
@@ -140,7 +165,10 @@ for epoch in range(num_epochs):
         action_chunks = batch["action_chunk"].to(device)
         
         with torch.no_grad():
-            loss = loss_criterion(model(images, action_histories), action_chunks)
+            predictions = model(images, action_histories)
+            logits_flat = predictions.view(-1, ACTION_SIZE)  
+            targets_flat = action_chunks.view(-1)
+            loss = loss_criterion(logits_flat, targets_flat)
         test_loss = loss.item()
         batch_test_losses.append(test_loss)
         test_pbar.set_postfix({"loss": f"{test_loss:.4f}"})

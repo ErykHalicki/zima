@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision
 from torchvision.transforms import v2
+import numpy as np
 
 class ActionResNet(nn.Module):
     transform = v2.Compose([
@@ -54,4 +55,38 @@ class ActionResNet(nn.Module):
     @staticmethod
     def convert_image_to_resnet(image):
         return ActionResNet.transform(image)
+    
+    @staticmethod
+    def bin_action(action):
+        '''
+        Bins a continuous action [left_speed, right_speed] into 1 of 5 classes (one-hot encoded)
+        Classes: 0=stop, 1=forward, 2=backward, 3=right, 4=left
+        Returns: one-hot encoded vector of shape [5]
+        '''
+        left_speed, right_speed = action
+
+        SPEED_THRESHOLD = 0.1
+        TURNING_THRESHOLD = 0.1
+
+        avg_speed = (left_speed + right_speed) / 2
+        speed_diff = left_speed - right_speed
+
+        # Determine class
+        if abs(speed_diff) > TURNING_THRESHOLD:
+            if speed_diff > 0:
+                class_idx = 3  # right (left wheel faster)
+            else:
+                class_idx = 4  # left (right wheel faster)
+        else:  # Forward/backward is dominant
+            if avg_speed > SPEED_THRESHOLD:
+                class_idx = 1  # forward
+            elif avg_speed < -SPEED_THRESHOLD:
+                class_idx = 2  # backward
+            else:
+                class_idx = 0  # stop
+
+        one_hot = np.zeros(5, dtype=np.float32)
+        one_hot[class_idx] = 1.0
+        return one_hot
+
         

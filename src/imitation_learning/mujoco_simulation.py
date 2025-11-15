@@ -6,6 +6,7 @@ import time
 from sim.keyboard_controller import KeyboardController
 from sim.nn_controller import NNController
 from datasets.zima_dataset import ZimaDataset
+from models.action_resnet import ActionResNet
 from pynput import keyboard
 import sys
 sys.path.append(".")#hack to use all packages in this directory
@@ -56,13 +57,13 @@ def move_item_random(item_name, min_coords, max_coords):
     move_item(item_name, x, y, z)
 
 
-train_mode = False
+train_mode = False 
 
-ACTION_CHUNK_SIZE = 30
-ACTION_HISTORY_SIZE = 30
-ACTION_SIZE = 2
+ACTION_CHUNK_SIZE = 10
+ACTION_HISTORY_SIZE = 4
+ACTION_SIZE = 5
 
-dataset = ZimaDataset("datasets/data/green_cube_navigation_clockwise.hdf5")
+dataset = ZimaDataset("datasets/data/orange_cube_servoing.hdf5")
 controller = KeyboardController()
 action_history_buffer = []
 if not train_mode:
@@ -72,7 +73,7 @@ episode_data = {"images": [], "actions": []}
 save_episode = False
 discard_episode = False
 reset_episode = True
-box_spawn_range = 1.25 
+box_spawn_range = 0.5
 
 def _on_press(key):
     global save_episode
@@ -120,7 +121,8 @@ with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_
 
                 controller.update(model, mjdata, rgb_array, action_history)
 
-                executed_action = controller.get_normalized_speeds()
+                executed_action = ActionResNet.bin_action(controller.get_normalized_speeds())
+                
                 action_history_buffer.append(executed_action)
                 if len(action_history_buffer) > ACTION_HISTORY_SIZE:
                     action_history_buffer.pop(0)
