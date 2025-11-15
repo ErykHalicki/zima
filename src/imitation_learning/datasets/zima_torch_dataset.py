@@ -5,13 +5,21 @@ import bisect
 import time
 
 class ZimaTorchDataset(ZimaDataset, Dataset):
-    def __init__(self, file_path, sample_transform=None, max_cached_episodes=5, max_cached_images=10000):
+    def __init__(self, file_path, 
+                 sample_transform=None, 
+                 max_cached_episodes=5, 
+                 max_cached_images=10000, 
+                 action_chunk_size=1,
+                 action_history_size=0):
         '''
         file_path: path to hdf5 Dataset
         sample_transform: transform function that takes in a sample dict 
             e.g. tranform({actions: [action], images: [image]})
             returned sample dict will match the key names given inside the episode (e.g. images, actions)
         max_cached_episodes: number of episodes to keep in memory using LRU cache
+        max_cached_images: number of transformed images to keep in cache
+        action_chunk_size: number of future actions to retreive at each get_item call
+        action_history_size: number of past actions to retreive at each get_item call
         '''
         super().__init__(file_path)
 
@@ -27,6 +35,8 @@ class ZimaTorchDataset(ZimaDataset, Dataset):
         self._transform_cache = {}
         self._transform_cache_order = []
         self.max_cached_transforms = max_cached_images 
+        self.action_chunk_size = action_chunk_size
+        self.action_history_size = action_history_size
         
     def __len__(self):
         return self.episode_boundaries[-1]
@@ -62,7 +72,38 @@ class ZimaTorchDataset(ZimaDataset, Dataset):
 
         episode = self._get_cached_episode(episode_num)
 
-        sample = {key: episode[key][idx_in_episode].copy() for key in episode}
+        # Get action history (past actions before idx, not including idx) with padding if needed
+
+        history_start_idx = idx_in_episode - self.action_history_size
+        if history_start_idx < 0:
+            available_history = idx_in_episode
+            history_actions = episode["actions"][0:idx_in_episode].copy()
+
+            history_padding_needed = self.action_history_size - available_history
+            if history_padding_needed > 0:
+                action_shape = episode["actions"].shape[1:] if len(episode["actions"].shape) > 1 else (episode["actions"].shape[0],)
+                history_padding = np.zeros((history_padding_needed,) + action_shape, dtype=episode["actions"].dtype)
+                history_actions = np.concatenate([history_padding, history_actions], axis=0)
+        else:
+            history_actions = episode["actions"][history_start_idx:idx_in_episode].copy()
+
+        # Get future actions (including idx) with padding if needed
+        future_end_idx = idx_in_episode + self.action_chunk_size
+        if future_end_idx > self.episode_lengths[episode_num]:
+            available_future = self.episode_lengths[episode_num] - idx_in_episode
+            future_actions = episode["actions"][idx_in_episode:idx_in_episode + available_future].copy()
+
+            future_padding_needed = self.action_chunk_size - available_future
+            if future_padding_needed > 0:
+                action_shape = episode["actions"].shape[1:] if len(episode["actions"].shape) > 1 else (episode["actions"].shape[0],)
+                future_padding = np.zeros((future_padding_needed,) + action_shape, dtype=episode["actions"].dtype)
+                future_actions = np.concatenate([future_actions, future_padding], axis=0)
+        else:
+            future_actions = episode["actions"][idx_in_episode:future_end_idx].copy()
+
+        sample = {"image": episode["images"][idx_in_episode].copy(),
+                  "action_history": history_actions,
+                  "action_chunk": future_actions}
 
         if self.sample_transform:
             sample = self.sample_transform(sample)

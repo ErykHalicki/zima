@@ -12,15 +12,15 @@ from datasets.zima_torch_dataset import ZimaTorchDataset
 import time
 import cv2
 from tqdm import tqdm
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 def sample_transform(sample):
     '''
     sample format: {"images": BGR np.array([480,640,3]), "actions": np.array([1,2])}
     Transforms image from sample to resnet format
     '''
-    rgb_image = cv2.cvtColor(sample["images"], cv2.COLOR_BGR2RGB)
-    sample["images"] = ActionResNet.convert_image_to_resnet(rgb_image)
+    rgb_image = cv2.cvtColor(sample["image"], cv2.COLOR_BGR2RGB)
+    sample["image"] = ActionResNet.convert_image_to_resnet(rgb_image)
     return sample
 
 def visualize_image(image_tensor):
@@ -44,10 +44,16 @@ def visualize_image(image_tensor):
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 print(f"Using {device} device")
 
-full_dataset = ZimaTorchDataset(file_path="datasets/data/small.hdf5", 
+ACTION_CHUNK_SIZE = 8
+ACTION_HISTORY_SIZE = 4
+ACTION_SIZE = 2
+
+full_dataset = ZimaTorchDataset(file_path="datasets/data/compressed_clockwise.hdf5", 
                                 sample_transform=sample_transform,
                                 max_cached_episodes=10,
-                                max_cached_images = 20000)
+                                max_cached_images = 20000,
+                                action_chunk_size = ACTION_CHUNK_SIZE,
+                                action_history_size = ACTION_HISTORY_SIZE)
 
 train_size = int(0.7 * len(full_dataset))
 test_size = len(full_dataset) - train_size
@@ -61,16 +67,26 @@ train_dataset, test_dataset = random_split(
 train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True, pin_memory = True)
 test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
-sample_images = next(iter(train_dataloader))["images"].to(device)
+sample_images = next(iter(train_dataloader))["image"].to(device)
 
 visualize_image(torchvision.utils.make_grid(sample_images))
 
-model = ActionResNet().to(device)
-mse_loss = nn.MSELoss()
-optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
 
-num_epochs = 30
+model = ActionResNet(ACTION_CHUNK_SIZE, ACTION_HISTORY_SIZE, ACTION_SIZE).to(device)
+mse_loss = nn.MSELoss()
+
+optimizer = optim.AdamW([
+    {'params': model.feature_extractor.parameters(), 'lr': 1e-4},      # pretrained, small updates
+    {'params': model.action_head.parameters(), 'lr': 1e-3}   # random init, larger updates
+], weight_decay=0.01)
+
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer, mode='min', factor=0.5, patience=5
+)
+
+num_epochs = 100
+max_plateaued_epochs = 15
+patience_counter = 0
 
 batch_losses = []
 epoch_test_losses = []
@@ -79,46 +95,30 @@ ground_truth_variances = []
 best_test_loss = 1000.0
 
 MODEL_SAVE_PATH = "models/weights/"
-MODEL_NAME = "action_resnet_FROZEN_BACKBONE"
+MODEL_NAME = "action_resnet"
 for epoch in range(num_epochs):
-    test_pbar = tqdm(test_dataloader, desc=f"Test {epoch+1}/{num_epochs}")
-    batch_test_losses = []
-    for batch in test_pbar:
-        images = batch["images"].to(device)
-        actions = batch["actions"].to(device)
-        
-        model.eval()
-        with torch.no_grad():
-            loss = mse_loss(model(images), actions)
-        test_loss = loss.item()
-        batch_test_losses.append(test_loss)
-        test_pbar.set_postfix({"loss": f"{test_loss:.4f}"})
-
-    avg_loss = np.mean(batch_test_losses)
-    print(f"Epoch {epoch+1}/{num_epochs} - Average Test Loss: {avg_loss:.4f}")
-    epoch_test_losses.append(avg_loss)
-    if avg_loss <= best_test_loss:
-        torch.save(model.state_dict(), MODEL_SAVE_PATH+MODEL_NAME+"_best.pt")
-        best_test_loss = avg_loss
-
     batch_start = time.time()
     pbar = tqdm(train_dataloader, desc=f"Epoch {epoch+1}/{num_epochs}")
     
     model.train()
     for batch in pbar:
 
-        images = batch["images"].to(device)
-        actions = batch["actions"].to(device)
-        action_variance = torch.var(actions).cpu()
+        images = batch["image"].to(device)
+        action_histories = batch["action_history"].to(device)
+        action_chunks = batch["action_chunk"].to(device)
+
+        action_variance = torch.var(action_chunks).cpu()
         ground_truth_variances.append(action_variance)
 
         data_time = time.time()
         
         optimizer.zero_grad()
-        predictions = model(images)
+        predictions = model(images, action_histories)
+
         prediction_variance = torch.var(predictions.detach()).cpu()
         prediction_variances.append(prediction_variance)
-        loss = mse_loss(predictions, actions)
+
+        loss = mse_loss(predictions, action_chunks)
         loss.backward()
         optimizer.step()
         train_time = time.time()
@@ -131,7 +131,35 @@ for epoch in range(num_epochs):
         pbar.set_postfix(postfix_dict)
         batch_start = time.time()
 
-    scheduler.step()
+    test_pbar = tqdm(test_dataloader, desc=f"Test {epoch+1}/{num_epochs}")
+    batch_test_losses = []
+    model.eval()
+    for batch in test_pbar:
+        images = batch["image"].to(device)
+        action_histories = batch["action_history"].to(device)
+        action_chunks = batch["action_chunk"].to(device)
+        
+        with torch.no_grad():
+            loss = mse_loss(model(images, action_histories), action_chunks)
+        test_loss = loss.item()
+        batch_test_losses.append(test_loss)
+        test_pbar.set_postfix({"loss": f"{test_loss:.4f}"})
+
+    avg_test_loss = np.mean(batch_test_losses)
+    print(f"Epoch {epoch+1}/{num_epochs} - Average Test Loss: {avg_test_loss:.4f}")
+    epoch_test_losses.append(avg_test_loss)
+
+    if avg_test_loss <= best_test_loss:
+        torch.save(model.state_dict(), MODEL_SAVE_PATH+MODEL_NAME+"_best.pt")
+        best_test_loss = avg_test_loss
+        patience_counter = 0
+    else:
+        patience_counter += 1
+        if patience_counter > max_plateaued_epochs:
+            break
+
+    scheduler.step(avg_test_loss)
+
     torch.save(model.state_dict(), MODEL_SAVE_PATH+MODEL_NAME+"_latest.pt")
 
 plt.figure(figsize=(15, 5))

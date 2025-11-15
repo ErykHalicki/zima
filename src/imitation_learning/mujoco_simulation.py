@@ -58,10 +58,15 @@ def move_item_random(item_name, min_coords, max_coords):
 
 train_mode = False
 
-dataset = ZimaDataset("datasets/data/green_cube_navigation.hdf5")
+ACTION_CHUNK_SIZE = 8
+ACTION_HISTORY_SIZE = 4
+ACTION_SIZE = 2
+
+dataset = ZimaDataset("datasets/data/green_cube_navigation_clockwise.hdf5")
 controller = KeyboardController()
+action_history_buffer = []
 if not train_mode:
-    controller = NNController("models/weights/action_resnet_best.pt")
+    controller = NNController("models/weights/action_resnet_best.pt", ACTION_CHUNK_SIZE, ACTION_HISTORY_SIZE, ACTION_SIZE)
 
 episode_data = {"images": [], "actions": []}
 save_episode = False
@@ -90,6 +95,7 @@ with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_
             move_item_random("blue_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
             move_item_random("green_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
             move_item("robot_body", 0, 0, 0.068)
+            action_history_buffer.clear()
             reset_episode = False
 
         step_start = time.time()
@@ -102,14 +108,26 @@ with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_
             renderer.update_scene(mjdata, camera="front_camera")
             rgb_array = renderer.render()
             bgr_array = cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR)
-            
+
             if not train_mode:
-                controller.update(model,mjdata, rgb_array)
+                if len(action_history_buffer) < ACTION_HISTORY_SIZE:
+                    padding_needed = ACTION_HISTORY_SIZE - len(action_history_buffer)
+                    action_history = np.zeros((padding_needed, ACTION_SIZE))
+                    if len(action_history_buffer) > 0:
+                        action_history = np.concatenate([action_history, np.array(action_history_buffer)])
+                else:
+                    action_history = np.array(action_history_buffer)
+
+                controller.update(model, mjdata, rgb_array, action_history)
+
+                executed_action = controller.get_normalized_speeds()
+                action_history_buffer.append(executed_action)
+                if len(action_history_buffer) > ACTION_HISTORY_SIZE:
+                    action_history_buffer.pop(0)
 
             cv2.imshow("zima front camera", bgr_array)
             cv2.waitKey(1)
             last_capture_time = mjdata.time
-            #--- CAPTURE DATA ---
             episode_data["images"].append(bgr_array)
             episode_data["actions"].append(controller.get_normalized_speeds())
 
