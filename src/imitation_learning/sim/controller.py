@@ -5,7 +5,7 @@ class Controller:
         self.left_speed = 0.0
         self.right_speed = 0.0
         self.max_speed = 0.5
-        self.turning_speed = 0.175
+        self.turning_speed = 0.1
 
     def update(self, model, data):
         """Update the robot control based on current state."""

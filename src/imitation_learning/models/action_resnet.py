@@ -24,18 +24,14 @@ class ActionResNet(nn.Module):
         super().__init__()
         resnet = torchvision.models.resnet18(weights='DEFAULT')
         for param in resnet.parameters():
-            param.requires_grad = True 
+            param.requires_grad =False
 
         self.feature_extractor = nn.Sequential(*list(resnet.children())[:-1])
 
         self.action_head = nn.Sequential(
             nn.Linear(512+action_history_size*action_size, 128),  # ResNet18 outputs 512 features + we input the action hitosry
             nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(64, action_size*action_chunk_size) 
+            nn.Linear(128, action_size*action_chunk_size) 
             # Output: [B, action_chunk_size * action_size]
             #output later gets transformed into [B, action_chunk_size, action_size]
         )
@@ -74,14 +70,12 @@ class ActionResNet(nn.Module):
         # Determine class
         if abs(speed_diff) > TURNING_THRESHOLD:
             if speed_diff > 0:
-                class_idx = 3  # right (left wheel faster)
+                class_idx = 2  # right (left wheel faster)
             else:
-                class_idx = 4  # left (right wheel faster)
+                class_idx = 3  # left (right wheel faster)
         else:  # Forward/backward is dominant
             if avg_speed > SPEED_THRESHOLD:
                 class_idx = 1  # forward
-            elif avg_speed < -SPEED_THRESHOLD:
-                class_idx = 2  # backward
             else:
                 class_idx = 0  # stop
 

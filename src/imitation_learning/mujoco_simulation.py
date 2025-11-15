@@ -24,8 +24,42 @@ dt = 1.0 / physics_fps
 model.opt.timestep = dt
 
 camera_fps = 30
+data_sample_fps = 10
 capture_interval = 1.0 / camera_fps
+data_sample_interval = 1.0 / data_sample_fps
 last_capture_time = 0
+last_data_time = 0
+
+def move_item_random_front_arc(item_name, distance_range=(1.5, 3.0), front_angle=120, exclude_center=30):
+    """Move item to random position in front arc, always visible but requiring turning.
+    
+    Args:
+        item_name: Name of the body to move
+        distance_range: (min_distance, max_distance) from robot origin
+        front_angle: Total angle in degrees of front arc (centered at 0°)
+        exclude_center: Angle in degrees to exclude directly in front
+    """
+    # Sample distance
+    distance = np.random.uniform(distance_range[0], distance_range[1])
+    
+    # Sample angle within front arc but excluding center
+    half_arc = np.deg2rad(front_angle / 2)
+    half_exclude = np.deg2rad(exclude_center / 2)
+    
+    # Sample from left or right side of the arc
+    if np.random.random() < 0.5:
+        # Left side: [half_exclude, half_arc]
+        angle = np.random.uniform(half_exclude, half_arc)
+    else:
+        # Right side: [-half_arc, -half_exclude]
+        angle = np.random.uniform(-half_arc, -half_exclude)
+    
+    # Convert polar to cartesian
+    x = distance * np.cos(angle)
+    y = distance * np.sin(angle)
+    z = 0.01
+    
+    move_item(item_name, x, y, z)
 
 def move_item(item_name, x, y, z=0.3):
     """Move a named item to specified position."""
@@ -57,13 +91,12 @@ def move_item_random(item_name, min_coords, max_coords):
     move_item(item_name, x, y, z)
 
 
-train_mode = False 
+train_mode = False
+ACTION_CHUNK_SIZE = 1
+ACTION_HISTORY_SIZE = 0
+ACTION_SIZE = 4
 
-ACTION_CHUNK_SIZE = 10
-ACTION_HISTORY_SIZE = 4
-ACTION_SIZE = 5
-
-dataset = ZimaDataset("datasets/data/orange_cube_servoing.hdf5")
+dataset = ZimaDataset("datasets/data/orange_cube_PLEASEWORK.hdf5")
 controller = KeyboardController()
 action_history_buffer = []
 if not train_mode:
@@ -73,7 +106,7 @@ episode_data = {"images": [], "actions": []}
 save_episode = False
 discard_episode = False
 reset_episode = True
-box_spawn_range = 0.5
+box_spawn_range = 0.4
 
 def _on_press(key):
     global save_episode
@@ -92,10 +125,11 @@ listener.start()
 with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_ui=False) as viewer:
     while viewer.is_running():
         if reset_episode:
-            move_item_random("orange_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
-            move_item_random("blue_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
-            move_item_random("green_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
-            move_item("robot_body", 0, 0, 0.068)
+            move_item_random_front_arc("orange_box", distance_range=(0.5, 0.75), front_angle=60, exclude_center=25)
+            #move_item_random("orange_box", (0.75, -box_spawn_range, 0.01), (1.0, box_spawn_range, 0.01))
+            #move_item_random("blue_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
+            #move_item_random("green_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
+            move_item("robot_body", 0, 0, 0.01)
             action_history_buffer.clear()
             reset_episode = False
 
@@ -129,9 +163,11 @@ with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_
 
             cv2.imshow("zima front camera", bgr_array)
             cv2.waitKey(1)
+            if mjdata.time - last_data_time >= data_sample_interval:
+                episode_data["images"].append(bgr_array)
+                episode_data["actions"].append(controller.get_normalized_speeds())
+                last_data_time = mjdata.time
             last_capture_time = mjdata.time
-            episode_data["images"].append(bgr_array)
-            episode_data["actions"].append(controller.get_normalized_speeds())
 
         if save_episode:
             save_start_time = time.time()

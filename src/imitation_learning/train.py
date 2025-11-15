@@ -51,11 +51,11 @@ def visualize_image(image_tensor):
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 print(f"Using {device} device")
 
-ACTION_CHUNK_SIZE = 10
-ACTION_HISTORY_SIZE = 4
-ACTION_SIZE = 5
+ACTION_CHUNK_SIZE = 1
+ACTION_HISTORY_SIZE = 0
+ACTION_SIZE = 4
 
-full_dataset = ZimaTorchDataset(file_path="datasets/data/compressed.hdf5", 
+full_dataset = ZimaTorchDataset(file_path="datasets/data/compressed_no_idle.hdf5", 
                                 sample_transform=sample_transform,
                                 max_cached_episodes=150,
                                 max_cached_images = 0,
@@ -87,10 +87,9 @@ for i in range(full_dataset.num_episodes):
 all_actions = np.concatenate(all_actions, axis=0)
 unique, counts = np.unique(all_actions, axis=0, return_counts=True)
 class_weights = []
-
 for action, count in zip(unique, counts):
     print(f"action {action}: {count} ({100*count/len(all_actions):.1f}%) of data")
-    class_weights.append(np.min([len(all_actions)/count,20.0]))
+    class_weights.append(len(all_actions)/count)
 
 class_weights = torch.from_numpy(np.array(class_weights, dtype=np.float32)).to(device)
 print(f"class weights: {class_weights}")
@@ -119,13 +118,17 @@ best_test_loss = 1000.0
 
 MODEL_SAVE_PATH = "models/weights/"
 MODEL_NAME = "action_resnet"
+CLASS_NAMES = ["stop", "forward", "right", "left"]
+
 for epoch in range(num_epochs):
     batch_start = time.time()
     pbar = tqdm(train_dataloader, desc=f"Epoch {epoch+1}/{num_epochs}")
-    
-    model.train()
-    for batch in pbar:
 
+    model.train()
+    training_epoch_loss = []
+    train_all_predictions = []
+    train_all_targets = []
+    for batch in pbar:
         images = batch["image"].to(device)
         action_histories = batch["action_history"].to(device)
         action_chunks = batch["action_chunk"].to(device)
@@ -148,16 +151,40 @@ for epoch in range(num_epochs):
         optimizer.step()
         train_time = time.time()
 
+        # Track predictions and targets for accuracy calculation
+        predicted_classes = torch.argmax(logits_flat, dim=1)
+        train_all_predictions.append(predicted_classes.cpu())
+        train_all_targets.append(targets_flat.cpu())
+
         batch_losses.append(loss.item())
+        training_epoch_loss.append(loss.item())
         
-        postfix_dict = {"loss": f'{loss.item():.4f}', 
+        postfix_dict = {"loss": f'{np.mean(training_epoch_loss):.4f}', 
                         "data_time": f"{(data_time-batch_start):.2f}", 
                         "train_time": f"{(train_time-data_time):.2f}"}
         pbar.set_postfix(postfix_dict)
         batch_start = time.time()
 
+    # Calculate and print training per-class accuracy
+    train_all_predictions = torch.cat(train_all_predictions)
+    train_all_targets = torch.cat(train_all_targets)
+
+    print(f"\nEpoch {epoch+1}/{num_epochs} - Training Metrics:")
+    print(f"  Overall Accuracy: {(train_all_predictions == train_all_targets).float().mean():.4f}")
+    print("  Per-class Accuracy:")
+    for class_idx, class_name in enumerate(CLASS_NAMES):
+        class_mask = train_all_targets == class_idx
+        if class_mask.sum() > 0:
+            class_acc = (train_all_predictions[class_mask] == train_all_targets[class_mask]).float().mean()
+            class_count = class_mask.sum().item()
+            print(f"    {class_name:8s} ({class_idx}): {class_acc:.4f} ({class_count:5d} samples)")
+        else:
+            print(f"    {class_name:8s} ({class_idx}): N/A (0 samples)")
+
     test_pbar = tqdm(test_dataloader, desc=f"Test {epoch+1}/{num_epochs}")
     batch_test_losses = []
+    test_all_predictions = []
+    test_all_targets = []
     model.eval()
     for batch in test_pbar:
         images = batch["image"].to(device)
@@ -166,15 +193,37 @@ for epoch in range(num_epochs):
         
         with torch.no_grad():
             predictions = model(images, action_histories)
-            logits_flat = predictions.view(-1, ACTION_SIZE)  
+            logits_flat = predictions.view(-1, ACTION_SIZE)
             targets_flat = action_chunks.view(-1)
             loss = loss_criterion(logits_flat, targets_flat)
+
+            # Track predictions and targets for accuracy calculation
+            predicted_classes = torch.argmax(logits_flat, dim=1)
+            test_all_predictions.append(predicted_classes.cpu())
+            test_all_targets.append(targets_flat.cpu())
+
         test_loss = loss.item()
         batch_test_losses.append(test_loss)
-        test_pbar.set_postfix({"loss": f"{test_loss:.4f}"})
+        test_pbar.set_postfix({"loss": f"{np.mean(batch_test_losses):.4f}"})
+
+    # Calculate and print test per-class accuracy
+    test_all_predictions = torch.cat(test_all_predictions)
+    test_all_targets = torch.cat(test_all_targets)
 
     avg_test_loss = np.mean(batch_test_losses)
-    print(f"Epoch {epoch+1}/{num_epochs} - Average Test Loss: {avg_test_loss:.4f}")
+    print(f"\nEpoch {epoch+1}/{num_epochs} - Test Metrics:")
+    print(f"  Average Test Loss: {avg_test_loss:.4f}")
+    print(f"  Overall Accuracy: {(test_all_predictions == test_all_targets).float().mean():.4f}")
+    print("  Per-class Accuracy:")
+    for class_idx, class_name in enumerate(CLASS_NAMES):
+        class_mask = test_all_targets == class_idx
+        if class_mask.sum() > 0:
+            class_acc = (test_all_predictions[class_mask] == test_all_targets[class_mask]).float().mean()
+            class_count = class_mask.sum().item()
+            print(f"    {class_name:8s} ({class_idx}): {class_acc:.4f} ({class_count:5d} samples)")
+        else:
+            print(f"    {class_name:8s} ({class_idx}): N/A (0 samples)")
+
     epoch_test_losses.append(avg_test_loss)
 
     if avg_test_loss <= best_test_loss:
