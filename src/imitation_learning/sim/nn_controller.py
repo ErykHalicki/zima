@@ -17,10 +17,8 @@ class NNController(Controller):
         input_image = ActionResNet.convert_image_to_resnet(input_image).to(self.device)
         input_batch = torch.unsqueeze(input_image, 0)
         action_history_tensor = torch.tensor(action_history, dtype=torch.float32).unsqueeze(0).to(self.device)
-        normalized_action_chunk = self.model(input_batch, action_history_tensor)
+        action_chunk = self.model(input_batch, action_history_tensor)
 
-        # Denormalize the action predictions
-        action_chunk = normalized_action_chunk * self.action_std + self.action_mean
         action_chunk = action_chunk.clone().detach().cpu()
 
         print(action_chunk)

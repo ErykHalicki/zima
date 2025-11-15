@@ -38,15 +38,6 @@ class ZimaTorchDataset(ZimaDataset, Dataset):
         self.action_chunk_size = action_chunk_size
         self.action_history_size = action_history_size
 
-        all_actions = []
-        for i in range(self.num_episodes):
-            episode = self.read_episode(i)
-            all_actions.append(episode["actions"])
-        all_actions = np.concatenate(all_actions, axis=0)
-
-        self.action_mean = np.mean(all_actions, axis=0)
-        self.action_std = np.std(all_actions, axis=0)
-        
     def __len__(self):
         return self.episode_boundaries[-1]
 
@@ -110,12 +101,9 @@ class ZimaTorchDataset(ZimaDataset, Dataset):
         else:
             future_actions = episode["actions"][idx_in_episode:future_end_idx].copy()
 
-        normalized_history = (history_actions - self.action_mean) / self.action_std
-        normalized_chunk = (future_actions - self.action_mean) / self.action_std
-
         sample = {"image": episode["images"][idx_in_episode].copy(),
-                  "action_history": normalized_history,
-                  "action_chunk": normalized_chunk}
+                  "action_history": history_actions,
+                  "action_chunk": future_actions}
 
         if self.sample_transform:
             sample = self.sample_transform(sample)
