@@ -44,18 +44,18 @@ def visualize_image(image_tensor):
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 print(f"Using {device} device")
 
-ACTION_CHUNK_SIZE = 8
-ACTION_HISTORY_SIZE = 4
+ACTION_CHUNK_SIZE = 30
+ACTION_HISTORY_SIZE = 30
 ACTION_SIZE = 2
 
-full_dataset = ZimaTorchDataset(file_path="datasets/data/compressed_clockwise.hdf5", 
+full_dataset = ZimaTorchDataset(file_path="datasets/data/compressed.hdf5", 
                                 sample_transform=sample_transform,
-                                max_cached_episodes=10,
-                                max_cached_images = 20000,
+                                max_cached_episodes=150,
+                                max_cached_images = 0,
                                 action_chunk_size = ACTION_CHUNK_SIZE,
                                 action_history_size = ACTION_HISTORY_SIZE)
 
-train_size = int(0.7 * len(full_dataset))
+train_size = int(0.75 * len(full_dataset))
 test_size = len(full_dataset) - train_size
 
 train_dataset, test_dataset = random_split(
@@ -73,11 +73,11 @@ visualize_image(torchvision.utils.make_grid(sample_images))
 
 
 model = ActionResNet(ACTION_CHUNK_SIZE, ACTION_HISTORY_SIZE, ACTION_SIZE).to(device)
-mse_loss = nn.MSELoss()
+loss_criterion = nn.SmoothL1Loss()
 
 optimizer = optim.AdamW([
     {'params': model.feature_extractor.parameters(), 'lr': 1e-4},      # pretrained, small updates
-    {'params': model.action_head.parameters(), 'lr': 1e-3}   # random init, larger updates
+    {'params': model.action_head.parameters(), 'lr': 3e-3}   # random init, larger updates
 ], weight_decay=0.01)
 
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -118,7 +118,7 @@ for epoch in range(num_epochs):
         prediction_variance = torch.var(predictions.detach()).cpu()
         prediction_variances.append(prediction_variance)
 
-        loss = mse_loss(predictions, action_chunks)
+        loss = loss_criterion(predictions, action_chunks)
         loss.backward()
         optimizer.step()
         train_time = time.time()
@@ -140,7 +140,7 @@ for epoch in range(num_epochs):
         action_chunks = batch["action_chunk"].to(device)
         
         with torch.no_grad():
-            loss = mse_loss(model(images, action_histories), action_chunks)
+            loss = loss_criterion(model(images, action_histories), action_chunks)
         test_loss = loss.item()
         batch_test_losses.append(test_loss)
         test_pbar.set_postfix({"loss": f"{test_loss:.4f}"})

@@ -8,12 +8,21 @@ class NNController(Controller):
         self.device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
         self.model = ActionResNet(action_chunk_size, action_history_size, action_size).to(self.device)
         self.model.load_state_dict(torch.load(weights_file_path, weights_only=True))
+
+        # Action normalization statistics
+        self.action_mean = torch.tensor([0.428, 0.325]).to(self.device)
+        self.action_std = torch.tensor([0.500, 0.579]).to(self.device)
    
     def update(self, mjmodel, mjdata, input_image, action_history):
         input_image = ActionResNet.convert_image_to_resnet(input_image).to(self.device)
         input_batch = torch.unsqueeze(input_image, 0)
         action_history_tensor = torch.tensor(action_history, dtype=torch.float32).unsqueeze(0).to(self.device)
-        action_chunk = self.model(input_batch, action_history_tensor).clone().detach().cpu()
+        normalized_action_chunk = self.model(input_batch, action_history_tensor)
+
+        # Denormalize the action predictions
+        action_chunk = normalized_action_chunk * self.action_std + self.action_mean
+        action_chunk = action_chunk.clone().detach().cpu()
+
         print(action_chunk)
         self.left_speed = action_chunk[0][0][0]*self.max_speed
         self.right_speed = action_chunk[0][0][1]*self.max_speed

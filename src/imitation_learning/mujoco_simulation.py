@@ -58,8 +58,8 @@ def move_item_random(item_name, min_coords, max_coords):
 
 train_mode = False
 
-ACTION_CHUNK_SIZE = 8
-ACTION_HISTORY_SIZE = 4
+ACTION_CHUNK_SIZE = 30
+ACTION_HISTORY_SIZE = 30
 ACTION_SIZE = 2
 
 dataset = ZimaDataset("datasets/data/green_cube_navigation_clockwise.hdf5")

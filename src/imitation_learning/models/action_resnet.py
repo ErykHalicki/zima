@@ -23,15 +23,17 @@ class ActionResNet(nn.Module):
         super().__init__()
         resnet = torchvision.models.resnet18(weights='DEFAULT')
         for param in resnet.parameters():
-            param.requires_grad = True
+            param.requires_grad = True 
 
         self.feature_extractor = nn.Sequential(*list(resnet.children())[:-1])
 
         self.action_head = nn.Sequential(
             nn.Linear(512+action_history_size*action_size, 128),  # ResNet18 outputs 512 features + we input the action hitosry
             nn.ReLU(),
+            nn.Dropout(0.1),
             nn.Linear(128, 64),
             nn.ReLU(),
+            nn.Dropout(0.1),
             nn.Linear(64, action_size*action_chunk_size) 
             # Output: [B, action_chunk_size * action_size]
             #output later gets transformed into [B, action_chunk_size, action_size]
@@ -41,7 +43,7 @@ class ActionResNet(nn.Module):
         self.action_size = action_size
 
     def forward(self, x, action_history):
-        #need to transform image to 224x224
+        #need to transform image to 3x224x224
         resnet_features = torch.flatten(self.feature_extractor(x), start_dim=1)
         flattened_action_history = torch.flatten(action_history, start_dim=1) 
         #use start_dim=1 to avoid flattening the entire batch
