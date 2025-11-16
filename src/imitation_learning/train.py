@@ -51,25 +51,25 @@ def visualize_image(image_tensor):
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 print(f"Using {device} device")
 
-ACTION_CHUNK_SIZE = 10
+ACTION_CHUNK_SIZE = 4
 ACTION_HISTORY_SIZE = 4
 ACTION_SIZE = 4
 
-full_dataset = ZimaTorchDataset(file_path="datasets/data/compressed_no_idle.hdf5", 
+full_dataset = ZimaTorchDataset(file_path="datasets/data/final!.hdf5", 
                                 sample_transform=sample_transform,
                                 max_cached_episodes=150,
                                 max_cached_images = 0,
                                 action_chunk_size = ACTION_CHUNK_SIZE,
                                 action_history_size = ACTION_HISTORY_SIZE)
 
-train_size = int(0.8 * len(full_dataset))
-test_size = int(0.2 * len(full_dataset))
+train_size = int(0.70 * len(full_dataset))
+test_size = int(0.3 * len(full_dataset))
 null_set_size = len(full_dataset) - test_size - train_size
 
 train_dataset, test_dataset, null_set = random_split(
     full_dataset, 
     [train_size, test_size, null_set_size],
-    generator=torch.Generator().manual_seed(420)
+    generator=torch.Generator().manual_seed(514)
 )
 
 train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True, pin_memory = True)
@@ -101,15 +101,15 @@ loss_criterion = nn.CrossEntropyLoss()
 
 optimizer = optim.AdamW([
     {'params': model.feature_extractor.parameters(), 'lr': 1e-5},      # pretrained, small updates
-    {'params': model.action_head.parameters(), 'lr': 1e-2}   # random init, larger updates
+    {'params': model.action_head.parameters(), 'lr': 3e-4}   # random init, larger updates
 ], weight_decay=0.01)
 
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(
     optimizer, mode='min', factor=0.5, patience=5
 )
 
-num_epochs = 100
-max_plateaued_epochs = 15
+num_epochs = 10
+max_plateaued_epochs = 5
 patience_counter = 0
 
 batch_losses = []
@@ -256,15 +256,6 @@ plt.plot(epoch_test_losses, label='Test Loss', color='orange')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.title('Test Loss')
-plt.legend()
-plt.grid(True)
-
-plt.subplot(1, 3, 3)
-plt.plot(prediction_variances, label='Prediction Variance', color='green', alpha=0.7)
-plt.plot(ground_truth_variances, label='Ground Truth Variance', color='red', alpha=0.7)
-plt.xlabel('Batch')
-plt.ylabel('Variance')
-plt.title('Prediction vs Ground Truth Variance')
 plt.legend()
 plt.grid(True)
 

@@ -2,6 +2,7 @@ import h5py
 import os
 import numpy as np
 from tqdm import tqdm
+import math
 
 def bin_action(action):
     '''
@@ -38,7 +39,7 @@ def find_first_non_idle_index(actions):
     '''
     for i, action in enumerate(actions):
         binned = bin_action(action)
-        if binned != 1:  # Not stop
+        if binned != 0:  # Not stop
             return i
     return len(actions)  # All actions are idle
 
@@ -49,7 +50,7 @@ def find_last_non_idle_index(actions):
     '''
     for i in range(len(actions) - 1, -1, -1):
         binned = bin_action(actions[i])
-        if binned != 1:  # Not stop
+        if binned != 0:  # Not stop
             return i
     return -1  # All actions are idle
 
@@ -83,7 +84,7 @@ def remove_leading_and_trailing_idle(input_path, output_path):
                 total_samples_before += len(actions)
 
                 # Find first and last non-idle actions
-                first_active_idx = find_first_non_idle_index(actions)
+                first_active_idx = max(find_first_non_idle_index(actions) , 0)
                 last_active_idx = find_last_non_idle_index(actions)
 
                 # Skip episode if all actions are idle
@@ -93,8 +94,8 @@ def remove_leading_and_trailing_idle(input_path, output_path):
                     continue
 
                 # Trim the data (inclusive of last_active_idx)
-                trimmed_actions = actions[first_active_idx:last_active_idx + 1]
-                trimmed_images = images[first_active_idx:last_active_idx + 1]
+                trimmed_actions = actions[first_active_idx:]
+                trimmed_images = images[first_active_idx:]
 
                 total_samples_after += len(trimmed_actions)
 
@@ -125,7 +126,7 @@ def remove_leading_and_trailing_idle(input_path, output_path):
     print(f"{'='*60}")
 
 if __name__ == "__main__":
-    input_path = "datasets/data/orange_cube_WILLWORK.hdf5"
-    output_path = "datasets/data/orange_cube_MUSTWORK.hdf5"
+    input_path = "datasets/data/compressed.hdf5"
+    output_path = "datasets/data/final!.hdf5"
 
     remove_leading_and_trailing_idle(input_path, output_path)

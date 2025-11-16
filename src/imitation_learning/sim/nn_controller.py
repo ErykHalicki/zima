@@ -23,10 +23,13 @@ class NNController(Controller):
         action_history_tensor = torch.tensor(action_history, dtype=torch.float32).unsqueeze(0).to(self.device)
         action_chunk = self.model(input_batch, action_history_tensor)
         sm = torch.nn.Softmax(dim=2)
-        print(torch.round(sm(action_chunk), decimals=2))
+        action_probs = sm(action_chunk)
+        #print(f"Action chunk probabilities:\n {torch.round(action_probs, decimals=2)}")
 
-        action_chunk = torch.argmax(action_chunk.detach().cpu(), dim=2)
-        next_action = action_chunk[0][0].item()  # Get first action from chunk
+        # Sample action from softmax distribution instead of taking argmax
+        next_action = torch.multinomial(action_probs[0][0], num_samples=1).item()
+        action_prob = action_probs[0][0][next_action].item()
+        print(f"Executing action: {next_action} with probability: {action_prob:.3f}")
 
         # Execute action based on class: 0=stop, 1=forward, 2=backward, 3=right, 4=left
         if next_action == 0:

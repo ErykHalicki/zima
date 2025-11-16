@@ -92,7 +92,7 @@ def move_item_random(item_name, min_coords, max_coords):
 
 
 train_mode = False
-ACTION_CHUNK_SIZE = 10
+ACTION_CHUNK_SIZE = 4
 ACTION_HISTORY_SIZE = 4
 ACTION_SIZE = 4
 
@@ -106,7 +106,7 @@ episode_data = {"images": [], "actions": []}
 save_episode = False
 discard_episode = False
 reset_episode = True
-box_spawn_range = 0.85
+box_spawn_range = 0.75
 
 def _on_press(key):
     global save_episode
@@ -187,6 +187,6 @@ with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_
 
         time_until_next_step = dt - (time.time() - step_start)
         if time_until_next_step > 0:
-            #time.sleep(time_until_next_step)
+            time.sleep(time_until_next_step)
             pass
 
