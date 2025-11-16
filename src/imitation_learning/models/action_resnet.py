@@ -24,7 +24,7 @@ class ActionResNet(nn.Module):
         super().__init__()
         resnet = torchvision.models.resnet18(weights='DEFAULT')
         for param in resnet.parameters():
-            param.requires_grad =False
+            param.requires_grad = True
 
         self.feature_extractor = nn.Sequential(*list(resnet.children())[:-1])
 
@@ -57,7 +57,7 @@ class ActionResNet(nn.Module):
         '''
         Bins a continuous action [left_speed, right_speed] into 1 of 5 classes (one-hot encoded)
         Classes: 0=stop, 1=forward, 2=backward, 3=right, 4=left
-        Returns: one-hot encoded vector of shape [5]
+        Returns: one-hot encoded vector of shape [4]
         '''
         left_speed, right_speed = action
 
@@ -79,7 +79,7 @@ class ActionResNet(nn.Module):
             else:
                 class_idx = 0  # stop
 
-        one_hot = np.zeros(5, dtype=np.float32)
+        one_hot = np.zeros(4, dtype=np.float32)
         one_hot[class_idx] = 1.0
         return one_hot
 

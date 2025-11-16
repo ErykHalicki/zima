@@ -92,21 +92,21 @@ def move_item_random(item_name, min_coords, max_coords):
 
 
 train_mode = False
-ACTION_CHUNK_SIZE = 1
-ACTION_HISTORY_SIZE = 0
+ACTION_CHUNK_SIZE = 10
+ACTION_HISTORY_SIZE = 4
 ACTION_SIZE = 4
 
 dataset = ZimaDataset("datasets/data/orange_cube_PLEASEWORK.hdf5")
 controller = KeyboardController()
 action_history_buffer = []
 if not train_mode:
-    controller = NNController("models/weights/action_resnet_best.pt", ACTION_CHUNK_SIZE, ACTION_HISTORY_SIZE, ACTION_SIZE)
+    controller = NNController("models/weights/action_resnet_latest.pt", ACTION_CHUNK_SIZE, ACTION_HISTORY_SIZE, ACTION_SIZE)
 
 episode_data = {"images": [], "actions": []}
 save_episode = False
 discard_episode = False
 reset_episode = True
-box_spawn_range = 0.4
+box_spawn_range = 0.85
 
 def _on_press(key):
     global save_episode
@@ -125,10 +125,10 @@ listener.start()
 with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_ui=False) as viewer:
     while viewer.is_running():
         if reset_episode:
-            move_item_random_front_arc("orange_box", distance_range=(0.5, 0.75), front_angle=60, exclude_center=25)
-            #move_item_random("orange_box", (0.75, -box_spawn_range, 0.01), (1.0, box_spawn_range, 0.01))
-            #move_item_random("blue_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
-            #move_item_random("green_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
+            #move_item_random_front_arc("orange_box", distance_range=(0.5, 0.75), front_angle=60, exclude_center=25)
+            move_item_random("blue_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
+            move_item_random("orange_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
+            move_item_random("green_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
             move_item("robot_body", 0, 0, 0.01)
             action_history_buffer.clear()
             reset_episode = False
@@ -187,5 +187,6 @@ with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_
 
         time_until_next_step = dt - (time.time() - step_start)
         if time_until_next_step > 0:
-            time.sleep(time_until_next_step)
+            #time.sleep(time_until_next_step)
+            pass
 

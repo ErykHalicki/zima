@@ -51,8 +51,8 @@ def visualize_image(image_tensor):
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 print(f"Using {device} device")
 
-ACTION_CHUNK_SIZE = 1
-ACTION_HISTORY_SIZE = 0
+ACTION_CHUNK_SIZE = 10
+ACTION_HISTORY_SIZE = 4
 ACTION_SIZE = 4
 
 full_dataset = ZimaTorchDataset(file_path="datasets/data/compressed_no_idle.hdf5", 
@@ -62,12 +62,13 @@ full_dataset = ZimaTorchDataset(file_path="datasets/data/compressed_no_idle.hdf5
                                 action_chunk_size = ACTION_CHUNK_SIZE,
                                 action_history_size = ACTION_HISTORY_SIZE)
 
-train_size = int(0.75 * len(full_dataset))
-test_size = len(full_dataset) - train_size
+train_size = int(0.8 * len(full_dataset))
+test_size = int(0.2 * len(full_dataset))
+null_set_size = len(full_dataset) - test_size - train_size
 
-train_dataset, test_dataset = random_split(
+train_dataset, test_dataset, null_set = random_split(
     full_dataset, 
-    [train_size, test_size],
+    [train_size, test_size, null_set_size],
     generator=torch.Generator().manual_seed(420)
 )
 
@@ -89,17 +90,18 @@ unique, counts = np.unique(all_actions, axis=0, return_counts=True)
 class_weights = []
 for action, count in zip(unique, counts):
     print(f"action {action}: {count} ({100*count/len(all_actions):.1f}%) of data")
-    class_weights.append(len(all_actions)/count)
+    class_weights.append((len(all_actions)/count)**(1/2))
 
 class_weights = torch.from_numpy(np.array(class_weights, dtype=np.float32)).to(device)
 print(f"class weights: {class_weights}")
 
 model = ActionResNet(ACTION_CHUNK_SIZE, ACTION_HISTORY_SIZE, ACTION_SIZE).to(device)
-loss_criterion = nn.CrossEntropyLoss(weight=class_weights)
+#loss_criterion = nn.CrossEntropyLoss(weight=class_weights)
+loss_criterion = nn.CrossEntropyLoss()
 
 optimizer = optim.AdamW([
-    {'params': model.feature_extractor.parameters(), 'lr': 1e-4},      # pretrained, small updates
-    {'params': model.action_head.parameters(), 'lr': 3e-3}   # random init, larger updates
+    {'params': model.feature_extractor.parameters(), 'lr': 1e-5},      # pretrained, small updates
+    {'params': model.action_head.parameters(), 'lr': 1e-2}   # random init, larger updates
 ], weight_decay=0.01)
 
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(

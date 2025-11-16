@@ -4,8 +4,8 @@ class Controller:
     def __init__(self):
         self.left_speed = 0.0
         self.right_speed = 0.0
-        self.max_speed = 0.5
-        self.turning_speed = 0.1
+        self.max_speed = 0.6
+        self.turning_speed = 0.15
 
     def update(self, model, data):
         """Update the robot control based on current state."""
