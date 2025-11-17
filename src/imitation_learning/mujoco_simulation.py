@@ -3,14 +3,20 @@ import mujoco.viewer
 import numpy as np
 import cv2
 import time
-from sim.keyboard_controller import KeyboardController
+from sim.web_controller import WebController
 from sim.nn_controller import NNController
 from datasets.zima_dataset import ZimaDataset
 from models.action_resnet import ActionResNet
-from pynput import keyboard
 import sys
 import torch
+import threading
 sys.path.append(".")#hack to use all packages in this directory
+
+from teleop_server import start_server, get_control_state, set_camera_frame, update_mode, print_to_terminal
+
+SPAWN_VIEWER = False
+
+threading.Thread(target=start_server, daemon=True).start()
 
 model = mujoco.MjModel.from_xml_path("sim/scenes/simple_scene.xml")
 
@@ -24,7 +30,7 @@ while True:
     if light_id == -1:
         break
     num_lights += 1
-print(f"Found {num_lights} controllable lights in the scene")
+print_to_terminal(f"Found {num_lights} controllable lights in the scene")
 
 # Dynamically count rubiks cubes at startup
 num_rubiks_cubes = 0
@@ -34,18 +40,18 @@ while True:
     if body_id == -1:
         break
     num_rubiks_cubes += 1
-print(f"Found {num_rubiks_cubes} rubiks cubes in the scene")
+print_to_terminal(f"Found {num_rubiks_cubes} rubiks cubes in the scene")
 
 # Create renderer for camera capture
-renderer = mujoco.Renderer(model, height=480, width=640)
+renderer = mujoco.Renderer(model, height=240, width=320)
 
 # Simulation parameters
 physics_fps = 2000
 dt = 1.0 / physics_fps
 model.opt.timestep = dt
 
-camera_fps = 30
-data_sample_fps = 30
+camera_fps = 10
+data_sample_fps = 10
 capture_interval = 1.0 / camera_fps
 data_sample_interval = 1.0 / data_sample_fps
 last_capture_time = 0
@@ -158,42 +164,28 @@ def load_model():
     return NNController(MODEL_PATH)
 
 dataset = ZimaDataset("datasets/data/rubiks_cube_navigation_sim.hdf5")
-controller = KeyboardController()
+controller = WebController(get_control_state)
 action_history_buffer = []
 if not train_mode:
     controller = load_model()
 
 episode_data = {"images": [], "actions": []}
-save_episode = False
-discard_episode = False
 reset_episode = True
-update_controller = False
 box_spawn_range = 0.75
 
-def _on_press(key):
-    global save_episode
-    global discard_episode
-    global train_mode
-    global controller
-    global update_controller
-    try:
-        if key.char == 'o' and train_mode:
-            save_episode = True
-        if key.char == 'p':
-            discard_episode = True
-        if key.char == 't':
-            update_controller=True
-            
-    except AttributeError:
-        pass
+print_to_terminal("Teleop server started at http://localhost:5000")
+update_mode("TRAIN" if train_mode else "TEST")
 
-listener = keyboard.Listener(on_press=_on_press)
-listener.start()
+if SPAWN_VIEWER:
+    viewer = mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_ui=False)
+else:
+    viewer = None
 
-with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_ui=False) as viewer:
-    while viewer.is_running():
+try:
+    while viewer is None or viewer.is_running():
+        control_state = get_control_state()
+
         if reset_episode:
-            # Randomize robot spawn position (smaller range than cubes)
             robot_x = np.random.uniform(-0.3, 0.3)
             robot_y = np.random.uniform(-0.3, 0.3)
             move_item("robot_body", robot_x, robot_y, 0.01, randomize_orientation=True)
@@ -201,20 +193,23 @@ with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_
             randomize_rubiks_cubes()
             action_history_buffer.clear()
             reset_episode = False
-        if update_controller:
+
+        if control_state['toggle_mode']:
             train_mode = not train_mode
             if train_mode:
-                controller = KeyboardController()
-                print("Switched to TRAIN mode controller")
+                controller = WebController(get_control_state)
+                print_to_terminal("Switched to TRAIN mode")
+                update_mode("TRAIN")
             else:
                 controller = load_model()
-                print("Switched to TEST mode controller")
-            update_controller = False
+                print_to_terminal("Switched to TEST mode")
+                update_mode("TEST")
 
         step_start = time.time()
-        
+
         mujoco.mj_step(model, mjdata)
-        viewer.sync()
+        if viewer is not None:
+            viewer.sync()
 
         if mjdata.time - last_capture_time >= capture_interval:
             renderer.update_scene(mjdata, camera="front_camera")
@@ -240,32 +235,31 @@ with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_
                 if len(action_history_buffer) > ACTION_HISTORY_SIZE:
                     action_history_buffer.pop(0)
 
-            cv2.imshow("zima front camera", bgr_array)
-            cv2.waitKey(1)
+            set_camera_frame(bgr_array)
+
             if mjdata.time - last_data_time >= data_sample_interval:
                 episode_data["images"].append(bgr_array)
                 episode_data["actions"].append(controller.get_normalized_speeds())
                 last_data_time = mjdata.time
             last_capture_time = mjdata.time
 
-        if save_episode:
+        if control_state['save_episode']:
             save_start_time = time.time()
             episode_num = dataset.add_episode(episode_data)
-            len
-            print(f"episode_{episode_num} saved with {len(episode_data["images"])} frames. Save time: {time.time()-save_start_time}s")
+            print_to_terminal(f"episode_{episode_num} saved with {len(episode_data['images'])} frames. Save time: {time.time()-save_start_time:.2f}s")
             episode_data["images"].clear()
             episode_data["actions"].clear()
             reset_episode = True
-            save_episode = False
 
-        if discard_episode:
+        if control_state['discard_episode']:
+            print_to_terminal(f"Episode discarded ({len(episode_data['images'])} frames)")
             episode_data["images"].clear()
             episode_data["actions"].clear()
             reset_episode = True
-            discard_episode = False
 
         time_until_next_step = dt - (time.time() - step_start)
         if time_until_next_step > 0:
             time.sleep(time_until_next_step)
-            pass
-
+finally:
+    if viewer is not None:
+        viewer.close()

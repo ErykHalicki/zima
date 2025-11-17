@@ -25,37 +25,37 @@
 
   <worldbody>
     <!-- Grid of ceiling lights (3x3) - warm white -->
-    <light name="light_0" pos="-0.8 -0.8 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="true" active="true" cutoff="45" exponent="5"/>
-    <light name="light_1" pos="0 -0.8 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="true" active="true" cutoff="40" exponent="5"/>
-    <light name="light_2" pos="0.8 -0.8 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="true" active="true" cutoff="50" exponent="5"/>
-    <light name="light_3" pos="-0.8 0 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="true" active="true" cutoff="35" exponent="5"/>
-    <light name="light_4" pos="0 0 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="true" active="true" cutoff="55" exponent="5"/>
-    <light name="light_5" pos="0.8 0 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="true" active="true" cutoff="42" exponent="5"/>
-    <light name="light_6" pos="-0.8 0.8 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="true" active="true" cutoff="48" exponent="5"/>
-    <light name="light_7" pos="0 0.8 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="true" active="true" cutoff="38" exponent="5"/>
-    <light name="light_8" pos="0.8 0.8 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="true" active="true" cutoff="52" exponent="5"/>
+    <light name="light_0" pos="-0.8 -0.8 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="false" active="true" cutoff="45" exponent="5"/>
+    <light name="light_1" pos="0 -0.8 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="false" active="true" cutoff="40" exponent="5"/>
+    <light name="light_2" pos="0.8 -0.8 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="false" active="true" cutoff="50" exponent="5"/>
+    <light name="light_3" pos="-0.8 0 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="false" active="true" cutoff="35" exponent="5"/>
+    <light name="light_4" pos="0 0 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="false" active="true" cutoff="55" exponent="5"/>
+    <light name="light_5" pos="0.8 0 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="false" active="true" cutoff="42" exponent="5"/>
+    <light name="light_6" pos="-0.8 0.8 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="false" active="true" cutoff="48" exponent="5"/>
+    <light name="light_7" pos="0 0.8 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="false" active="true" cutoff="38" exponent="5"/>
+    <light name="light_8" pos="0.8 0.8 0.65" dir="0 0 -1" diffuse="0.6 0.55 0.5" specular="0.1 0.1 0.08" castshadow="false" active="true" cutoff="52" exponent="5"/>
 
     <!-- Additional colored accent lights with varied angles and cutoffs -->
-    <light name="light_9" pos="-1.0 -1.0 0.5" dir="0.2 0.2 -1" diffuse="0.8 0.3 0.3" specular="0.1 0.05 0.05" castshadow="true" active="true" cutoff="25" exponent="5"/>
-    <light name="light_10" pos="1.0 -1.0 0.5" dir="-0.2 0.2 -1" diffuse="0.3 0.3 0.9" specular="0.05 0.05 0.15" castshadow="true" active="true" cutoff="30" exponent="5"/>
-    <light name="light_11" pos="-1.0 1.0 0.5" dir="0.2 -0.2 -1" diffuse="0.3 0.8 0.3" specular="0.05 0.1 0.05" castshadow="true" active="true" cutoff="28" exponent="5"/>
-    <light name="light_12" pos="1.0 1.0 0.5" dir="-0.2 -0.2 -1" diffuse="0.7 0.7 0.3" specular="0.1 0.1 0.05" castshadow="true" active="true" cutoff="35" exponent="5"/>
-    <light name="light_13" pos="0 -1.2 0.45" dir="0 0.3 -1" diffuse="0.5 0.2 0.7" specular="0.08 0.03 0.1" castshadow="true" active="true" cutoff="22" exponent="5"/>
-    <light name="light_14" pos="0 1.2 0.45" dir="0 -0.3 -1" diffuse="0.2 0.6 0.8" specular="0.03 0.08 0.12" castshadow="true" active="true" cutoff="26" exponent="5"/>
-    <light name="light_15" pos="-1.2 0 0.45" dir="0.3 0 -1" diffuse="0.9 0.4 0.2" specular="0.12 0.06 0.03" castshadow="true" active="true" cutoff="32" exponent="5"/>
-    <light name="light_16" pos="1.2 0 0.45" dir="-0.3 0 -1" diffuse="0.2 0.8 0.5" specular="0.03 0.12 0.08" castshadow="true" active="true" cutoff="29" exponent="5"/>
-    <light name="light_17" pos="-0.5 -0.5 0.6" dir="0.1 0.1 -1" diffuse="0.6 0.3 0.9" specular="0.08 0.04 0.12" castshadow="true" active="true" cutoff="38" exponent="5"/>
-    <light name="light_18" pos="0.5 -0.5 0.6" dir="-0.1 0.1 -1" diffuse="0.9 0.6 0.2" specular="0.12 0.08 0.03" castshadow="true" active="true" cutoff="42" exponent="5"/>
-    <light name="light_19" pos="-0.5 0.5 0.6" dir="0.1 -0.1 -1" diffuse="0.3 0.9 0.8" specular="0.04 0.12 0.1" castshadow="true" active="true" cutoff="36" exponent="5"/>
-    <light name="light_20" pos="0.5 0.5 0.6" dir="-0.1 -0.1 -1" diffuse="0.8 0.2 0.4" specular="0.1 0.03 0.06" castshadow="true" active="true" cutoff="44" exponent="5"/>
-    <light name="light_21" pos="0 0 0.55" dir="0.15 0.15 -1" diffuse="0.4 0.5 0.9" specular="0.06 0.08 0.12" castshadow="true" active="true" cutoff="48" exponent="5"/>
-    <light name="light_22" pos="-0.6 0.3 0.58" dir="0.2 -0.1 -1" diffuse="0.9 0.3 0.6" specular="0.12 0.04 0.08" castshadow="true" active="true" cutoff="34" exponent="5"/>
-    <light name="light_23" pos="0.6 -0.3 0.58" dir="-0.2 0.1 -1" diffuse="0.3 0.7 0.3" specular="0.04 0.1 0.04" castshadow="true" active="true" cutoff="40" exponent="5"/>
-    <light name="light_24" pos="-0.3 0.6 0.52" dir="0.1 -0.2 -1" diffuse="0.7 0.8 0.4" specular="0.1 0.12 0.06" castshadow="true" active="true" cutoff="46" exponent="5"/>
-    <light name="light_25" pos="0.3 -0.6 0.52" dir="-0.1 0.2 -1" diffuse="0.5 0.3 0.8" specular="0.08 0.04 0.1" castshadow="true" active="true" cutoff="31" exponent="5"/>
-    <light name="light_26" pos="-0.9 -0.4 0.54" dir="0.25 0.15 -1" diffuse="0.2 0.9 0.6" specular="0.03 0.12 0.08" castshadow="true" active="true" cutoff="37" exponent="5"/>
-    <light name="light_27" pos="0.9 0.4 0.54" dir="-0.25 -0.15 -1" diffuse="0.8 0.5 0.3" specular="0.1 0.08 0.04" castshadow="true" active="true" cutoff="43" exponent="5"/>
-    <light name="light_28" pos="0.4 0.9 0.56" dir="-0.15 -0.25 -1" diffuse="0.4 0.3 0.95" specular="0.06 0.04 0.14" castshadow="true" active="true" cutoff="27" exponent="5"/>
+    <light name="light_9" pos="-1.0 -1.0 0.5" dir="0.2 0.2 -1" diffuse="0.8 0.3 0.3" specular="0.1 0.05 0.05" castshadow="false" active="true" cutoff="25" exponent="5"/>
+    <light name="light_10" pos="1.0 -1.0 0.5" dir="-0.2 0.2 -1" diffuse="0.3 0.3 0.9" specular="0.05 0.05 0.15" castshadow="false" active="true" cutoff="30" exponent="5"/>
+    <light name="light_11" pos="-1.0 1.0 0.5" dir="0.2 -0.2 -1" diffuse="0.3 0.8 0.3" specular="0.05 0.1 0.05" castshadow="false" active="true" cutoff="28" exponent="5"/>
+    <light name="light_12" pos="1.0 1.0 0.5" dir="-0.2 -0.2 -1" diffuse="0.7 0.7 0.3" specular="0.1 0.1 0.05" castshadow="false" active="true" cutoff="35" exponent="5"/>
+    <light name="light_13" pos="0 -1.2 0.45" dir="0 0.3 -1" diffuse="0.5 0.2 0.7" specular="0.08 0.03 0.1" castshadow="false" active="true" cutoff="22" exponent="5"/>
+    <light name="light_14" pos="0 1.2 0.45" dir="0 -0.3 -1" diffuse="0.2 0.6 0.8" specular="0.03 0.08 0.12" castshadow="false" active="true" cutoff="26" exponent="5"/>
+    <light name="light_15" pos="-1.2 0 0.45" dir="0.3 0 -1" diffuse="0.9 0.4 0.2" specular="0.12 0.06 0.03" castshadow="false" active="true" cutoff="32" exponent="5"/>
+    <light name="light_16" pos="1.2 0 0.45" dir="-0.3 0 -1" diffuse="0.2 0.8 0.5" specular="0.03 0.12 0.08" castshadow="false" active="true" cutoff="29" exponent="5"/>
+    <light name="light_17" pos="-0.5 -0.5 0.6" dir="0.1 0.1 -1" diffuse="0.6 0.3 0.9" specular="0.08 0.04 0.12" castshadow="false" active="true" cutoff="38" exponent="5"/>
+    <light name="light_18" pos="0.5 -0.5 0.6" dir="-0.1 0.1 -1" diffuse="0.9 0.6 0.2" specular="0.12 0.08 0.03" castshadow="false" active="true" cutoff="42" exponent="5"/>
+    <light name="light_19" pos="-0.5 0.5 0.6" dir="0.1 -0.1 -1" diffuse="0.3 0.9 0.8" specular="0.04 0.12 0.1" castshadow="false" active="true" cutoff="36" exponent="5"/>
+    <light name="light_20" pos="0.5 0.5 0.6" dir="-0.1 -0.1 -1" diffuse="0.8 0.2 0.4" specular="0.1 0.03 0.06" castshadow="false" active="true" cutoff="44" exponent="5"/>
+    <light name="light_21" pos="0 0 0.55" dir="0.15 0.15 -1" diffuse="0.4 0.5 0.9" specular="0.06 0.08 0.12" castshadow="false" active="true" cutoff="48" exponent="5"/>
+    <light name="light_22" pos="-0.6 0.3 0.58" dir="0.2 -0.1 -1" diffuse="0.9 0.3 0.6" specular="0.12 0.04 0.08" castshadow="false" active="true" cutoff="34" exponent="5"/>
+    <light name="light_23" pos="0.6 -0.3 0.58" dir="-0.2 0.1 -1" diffuse="0.3 0.7 0.3" specular="0.04 0.1 0.04" castshadow="false" active="true" cutoff="40" exponent="5"/>
+    <light name="light_24" pos="-0.3 0.6 0.52" dir="0.1 -0.2 -1" diffuse="0.7 0.8 0.4" specular="0.1 0.12 0.06" castshadow="false" active="true" cutoff="46" exponent="5"/>
+    <light name="light_25" pos="0.3 -0.6 0.52" dir="-0.1 0.2 -1" diffuse="0.5 0.3 0.8" specular="0.08 0.04 0.1" castshadow="false" active="true" cutoff="31" exponent="5"/>
+    <light name="light_26" pos="-0.9 -0.4 0.54" dir="0.25 0.15 -1" diffuse="0.2 0.9 0.6" specular="0.03 0.12 0.08" castshadow="false" active="true" cutoff="37" exponent="5"/>
+    <light name="light_27" pos="0.9 0.4 0.54" dir="-0.25 -0.15 -1" diffuse="0.8 0.5 0.3" specular="0.1 0.08 0.04" castshadow="false" active="true" cutoff="43" exponent="5"/>
+    <light name="light_28" pos="0.4 0.9 0.56" dir="-0.15 -0.25 -1" diffuse="0.4 0.3 0.95" specular="0.06 0.04 0.14" castshadow="false" active="true" cutoff="27" exponent="5"/>
 
     <!-- Corner lamp lights -->
     <light name="lamp_light_1" pos="1.2 1.2 0.4" dir="0 0 -1" diffuse="0.5 0.45 0.4" specular="0.2 0.2 0.15" castshadow="false" attenuation="0.5 0.5 0.5"/>

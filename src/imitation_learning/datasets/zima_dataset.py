@@ -2,8 +2,6 @@ import h5py
 import numpy as np
 import os
 
-from numpy._core.numeric import array
-
 class ZimaDataset:
     def __init__(self, file_path):
         self.file_path = file_path
