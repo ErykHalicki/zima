@@ -62,3 +62,20 @@ class ZimaDataset:
                 return f[f"episode_{episode_num}"][key][:]
         else:
             raise Exception(f"Invalid episode_num: {episode_num}. There are only {self.num_episodes} episodes in the dataset!")
+
+    def delete_episode(self, episode_num):
+        """Delete an episode from the dataset."""
+        if episode_num >= self.num_episodes:
+            raise Exception(f"Invalid episode_num: {episode_num}. There are only {self.num_episodes} episodes in the dataset!")
+
+        with h5py.File(self.file_path, 'a') as f:
+            episode_key = f"episode_{episode_num}"
+            if episode_key in f:
+                del f[episode_key]
+                print(f"Deleted {episode_key}")
+            else:
+                raise Exception(f"{episode_key} not found in dataset!")
+
+        # Update episode count
+        with h5py.File(self.file_path, 'r') as f:
+            self.num_episodes = len(f.keys())
