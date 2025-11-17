@@ -15,6 +15,26 @@ model = mujoco.MjModel.from_xml_path("sim/scenes/simple_scene.xml")
 
 mjdata = mujoco.MjData(model)
 
+# Dynamically count lights at startup
+num_lights = 0
+while True:
+    light_name = f"light_{num_lights}"
+    light_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_LIGHT, light_name)
+    if light_id == -1:
+        break
+    num_lights += 1
+print(f"Found {num_lights} controllable lights in the scene")
+
+# Dynamically count rubiks cubes at startup
+num_rubiks_cubes = 0
+while True:
+    cube_name = f"rubiks_cube{num_rubiks_cubes + 1}"
+    body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, cube_name)
+    if body_id == -1:
+        break
+    num_rubiks_cubes += 1
+print(f"Found {num_rubiks_cubes} rubiks cubes in the scene")
+
 # Create renderer for camera capture
 renderer = mujoco.Renderer(model, height=480, width=640)
 
@@ -90,8 +110,68 @@ def move_item_random(item_name, min_coords, max_coords):
     z = np.random.uniform(min_coords[2], max_coords[2])
     move_item(item_name, x, y, z)
 
+def randomize_lights(min_lights=0, max_lights=None):
+    """Randomly toggle ceiling lights on/off using normal distribution.
 
-train_mode = False
+    Args:
+        min_lights: Minimum number of lights to keep on
+        max_lights: Maximum number of lights to turn on (defaults to all lights)
+    """
+    if max_lights is None:
+        max_lights = num_lights
+
+    # Sample from normal distribution
+    mean = (min_lights + max_lights) / 2
+    std = num_lights / 4
+    num_active = int(np.random.normal(mean, std))
+
+    # Clamp to valid range
+    num_active = np.clip(num_active, min_lights, max_lights)
+
+    # Randomly select which lights to turn on
+    active_indices = np.random.choice(num_lights, size=num_active, replace=False)
+
+    # Toggle all lights
+    for i in range(num_lights):
+        light_name = f"light_{i}"
+        light_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_LIGHT, light_name)
+        if light_id != -1:
+            model.light_active[light_id] = 1 if i in active_indices else 0
+
+    mujoco.mj_forward(model, mjdata)
+
+def randomize_rubiks_cubes():
+    """Place one random rubiks cube in the room, rest on the desk."""
+    if num_rubiks_cubes == 0:
+        return
+
+    # Pick a random cube to place in the room
+    random_cube_idx = np.random.randint(0, num_rubiks_cubes)
+
+    # Desk location (from room.xml, desk is at x=-1.15, y=0.5, desktop at z=0.2)
+    desk_x = -1.15
+    desk_y = 0.5
+    desk_z = 0.22  # Just above desktop
+
+    for i in range(num_rubiks_cubes):
+        cube_name = f"rubiks_cube{i + 1}"
+
+        if i == random_cube_idx:
+            # Place this cube randomly in the room
+            # Room bounds: approximately -1.5 to 1.5 in x and y, avoiding furniture
+            x = np.random.uniform(-1.0, 1.0)
+            y = np.random.uniform(-1.0, 1.0)
+            z = 0.025  # Half the cube size (0.025) to sit on floor
+            move_item(cube_name, x, y, z)
+        else:
+            # Stack cubes on desk
+            # Calculate stack position (first cube on desk, then stack upward)
+            desk_cube_idx = i if i < random_cube_idx else i - 1
+            stack_height = desk_cube_idx * 0.05  # Each cube is 0.05 tall
+            move_item(cube_name, desk_x, desk_y, desk_z + stack_height)
+
+
+train_mode = True
 ACTION_CHUNK_SIZE = 4
 ACTION_HISTORY_SIZE = 4
 ACTION_SIZE = 4
@@ -125,11 +205,9 @@ listener.start()
 with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_ui=False) as viewer:
     while viewer.is_running():
         if reset_episode:
-            #move_item_random_front_arc("orange_box", distance_range=(0.5, 0.75), front_angle=60, exclude_center=25)
-            move_item_random("blue_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
-            move_item_random("orange_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
-            move_item_random("green_box", (-box_spawn_range, -box_spawn_range, 0.1), (box_spawn_range, box_spawn_range, 0.1))
             move_item("robot_body", 0, 0, 0.01)
+            randomize_lights(min_lights=5)
+            randomize_rubiks_cubes()
             action_history_buffer.clear()
             reset_episode = False
 

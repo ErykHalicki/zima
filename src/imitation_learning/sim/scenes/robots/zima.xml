@@ -15,11 +15,11 @@
   <worldbody>
     <body name="robot_body" pos="0 0 0.068">
       <joint type="free"/>
-      <camera name="front_camera" mode="fixed" pos="0.05 0 0" xyaxes="0 -1 0 0 0 1"/>
+      <camera name="front_camera" mode="fixed" pos="0.05 0 -0.03" xyaxes="0 -1 0 0 0 1"/>
 
       <!-- Main body box -->
       <geom name="body_geom" type="box" size="0.05 0.05 0.05" pos="0 0 0" mass="1.0" rgba="1 0.5 0 1"/>
-      <geom name="camera_indicator" type="box" size="0.002 0.015 0.010" pos="0.052 0 0" rgba="0 0 0 1"/>
+      <geom name="camera_indicator" type="box" size="0.002 0.015 0.010" pos="0.052 0 -0.03" rgba="0 0 0 1"/>
 
       <!-- Antennas -->
       <geom name="antenna_left" type="box" size="0.004 0.004 0.025" pos="0.01 -0.02 0.075" quat="0.9659258 0 -0.258819 0" rgba="0 0 0 1"/>

@@ -3,43 +3,63 @@
   <option timestep="0.0005"/>
 
   <include file="robots/zima.xml"/>
+  <include file="room.xml"/>
 
   <statistic center="0 0 0.1" extent="0.8"/>
 
-  <visual>
-    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
-    <rgba haze="0.15 0.25 0.35 1"/>
-    <global azimuth="120" elevation="-20"/>
-  </visual>
 
   <asset>
-    <texture type="skybox" builtin="gradient" rgb1="0.8 0.8 0.8" rgb2="0 0 0" width="512" height="3072"/>
-    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
-      markrgb="0.8 0.8 0.8" width="300" height="300"/>
-    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
-    <texture type="2d" name="wheel_texture" builtin="checker" mark="edge" rgb1="0.0 0.0 0.0" rgb2="0.2 0.2 0.2"
-      markrgb="0.3 0.3 0.3" width="300" height="300"/>
+    <texture type="skybox" file="textures/moon.png"/>
+
+    <texture type="2d" name="wheel_texture" builtin="checker" mark="edge" rgb1="0.0 0.0 0.0" rgb2="0.2 0.2 0.2" width="300" height="300"/>
     <material name="wheel_material" texture="wheel_texture" texuniform="true" texrepeat="5 5"/>
+
+    <texture type="cube" name="rubiks_texture1" file="textures/rubiks.png" gridsize = "3 4" gridlayout = "..U.RFLB..D." />
+    <texture type="cube" name="rubiks_texture2" file="textures/rubiks.png" gridsize = "3 4" gridlayout = ".U..LDBF.R.." />
+    <texture type="cube" name="rubiks_texture3" file="textures/rubiks.png" gridsize = "3 4" gridlayout = "...UFLR.DB.." />
+    <texture type="cube" name="rubiks_texture4" file="textures/rubiks.png" gridsize = "3 4" gridlayout = "..D.UBFL..R." />
+    <texture type="cube" name="rubiks_texture5" file="textures/rubiks.png" gridsize = "3 4" gridlayout = ".D..RUFB.L.." />
+    <material name="rubiks_material1" texture="rubiks_texture1"/>
+    <material name="rubiks_material2" texture="rubiks_texture2"/>
+    <material name="rubiks_material3" texture="rubiks_texture3"/>
+    <material name="rubiks_material4" texture="rubiks_texture4"/>
+    <material name="rubiks_material5" texture="rubiks_texture5"/>
   </asset>
 
   <worldbody>
-    <light pos="0 0 3" dir="0 0 -1" directional="true" diffuse="0.8 0.8 0.8" specular="0.2 0.2 0.2"/>
-    <geom name="floor" size="0 0 0.05" pos="0 0 -0.1" type="plane" material="groundplane"/>
-    <body name="orange_box" pos="0.2 0.2 0.05">
+    <!-- Very light directional light for base illumination -->
+    <light directional="true" pos="0 0 3" dir="0 0 -1" diffuse="0.2 0.2 0.2" specular="0.05 0.05 0.05" castshadow="false"/>
+
+    <body name="rubiks_cube1" pos="1.0 0.0 0.05">
       <freejoint/>
       <inertial pos="0 0 0" mass="0.1" diaginertia="0.00016667 0.00016667 0.00016667"/>
-      <geom type="box" size="0.05 0.05 0.05" rgba="1 0.5 0 1"/>
+      <geom type="box" material="rubiks_material1" size="0.025 0.025 0.025" />
     </body>
-    <body name="blue_box" pos="-5.4 0.2 0.05">
+
+    <body name="rubiks_cube2" pos="1.0 0.0 0.10">
       <freejoint/>
       <inertial pos="0 0 0" mass="0.1" diaginertia="0.00016667 0.00016667 0.00016667"/>
-      <geom type="box" size="0.05 0.05 0.05" rgba="0 0.5 1 1"/>
+      <geom type="box" material="rubiks_material2" size="0.025 0.025 0.025" />
     </body>
-    <body name="green_box" pos="-5.6 0.2 0.05">
+
+    <body name="rubiks_cube3" pos="1.0 0.0 0.15">
       <freejoint/>
       <inertial pos="0 0 0" mass="0.1" diaginertia="0.00016667 0.00016667 0.00016667"/>
-      <geom type="box" size="0.05 0.05 0.05" rgba="0 1 0.5 1"/>
+      <geom type="box" material="rubiks_material3" size="0.025 0.025 0.025" />
     </body>
+
+    <body name="rubiks_cube4" pos="1.0 0.0 0.20">
+      <freejoint/>
+      <inertial pos="0 0 0" mass="0.1" diaginertia="0.00016667 0.00016667 0.00016667"/>
+      <geom type="box" material="rubiks_material4" size="0.025 0.025 0.025" />
+    </body>
+
+    <body name="rubiks_cube5" pos="1.0 0.0 0.25">
+      <freejoint/>
+      <inertial pos="0 0 0" mass="0.1" diaginertia="0.00016667 0.00016667 0.00016667"/>
+      <geom type="box" material="rubiks_material5" size="0.025 0.025 0.025" />
+    </body>
+
   </worldbody>
 
 </mujoco>
