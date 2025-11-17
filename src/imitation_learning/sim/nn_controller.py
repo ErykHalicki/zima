@@ -3,12 +3,40 @@ from models.action_resnet import ActionResNet
 import torch
 
 class NNController(Controller):
-    def __init__(self, weights_file_path, action_chunk_size, action_history_size, action_size):
+    def __init__(self, model_path):
         super().__init__()
         self.device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
-        self.model = ActionResNet(action_chunk_size, action_history_size, action_size).to(self.device)
-        self.model.load_state_dict(torch.load(weights_file_path, weights_only=True))
 
+        # Load checkpoint with metadata
+        checkpoint = torch.load(model_path, weights_only=False)
+
+        # Extract metadata
+        metadata = checkpoint['metadata']
+        self.action_chunk_size = metadata['action_chunk_size']
+        self.action_history_size = metadata['action_history_size']
+        self.action_size = metadata['action_size']
+
+        # Print model information
+        print(f"\n=== Loading Model ===")
+        print(f"Model: {metadata['model_architecture']}")
+        print(f"Training Date: {metadata['training_date']}")
+        print(f"Total Parameters: {metadata['total_params']:,}")
+        print(f"Trainable Parameters: {metadata['trainable_params']:,}")
+        print(f"Dataset Size: {metadata['total_dataset_size']:,} samples")
+        print(f"Action Chunk Size: {self.action_chunk_size}")
+        print(f"Action History Size: {self.action_history_size}")
+        print(f"Action Size: {self.action_size}")
+        if 'epoch' in checkpoint:
+            print(f"Epoch: {checkpoint['epoch']}")
+        if 'best_test_loss' in checkpoint:
+            print(f"Best Test Loss: {checkpoint['best_test_loss']:.4f}")
+        elif 'last_test_loss' in checkpoint:
+            print(f"Last Test Loss: {checkpoint['last_test_loss']:.4f}")
+        print(f"====================\n")
+
+        # Create and load model
+        self.model = ActionResNet(self.action_chunk_size, self.action_history_size, self.action_size).to(self.device)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model.eval()
    
     def update(self, mjmodel, mjdata, input_image, action_history):

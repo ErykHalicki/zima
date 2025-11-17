@@ -13,6 +13,7 @@ import time
 import cv2
 from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from datetime import datetime
 
 def sample_transform(sample):
     '''
@@ -51,19 +52,19 @@ def visualize_image(image_tensor):
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 print(f"Using {device} device")
 
-ACTION_CHUNK_SIZE = 4
-ACTION_HISTORY_SIZE = 4
+ACTION_CHUNK_SIZE = 10
+ACTION_HISTORY_SIZE = 10
 ACTION_SIZE = 4
 
-full_dataset = ZimaTorchDataset(file_path="datasets/data/final!.hdf5", 
+full_dataset = ZimaTorchDataset(file_path="datasets/data/rubiks_cube_navigation_sim.hdf5", 
                                 sample_transform=sample_transform,
                                 max_cached_episodes=150,
                                 max_cached_images = 0,
                                 action_chunk_size = ACTION_CHUNK_SIZE,
                                 action_history_size = ACTION_HISTORY_SIZE)
 
-train_size = int(0.70 * len(full_dataset))
-test_size = int(0.3 * len(full_dataset))
+train_size = int(0.80 * len(full_dataset))
+test_size = int(0.2 * len(full_dataset))
 null_set_size = len(full_dataset) - test_size - train_size
 
 train_dataset, test_dataset, null_set = random_split(
@@ -121,6 +122,31 @@ best_test_loss = 1000.0
 MODEL_SAVE_PATH = "models/weights/"
 MODEL_NAME = "action_resnet"
 CLASS_NAMES = ["stop", "forward", "right", "left"]
+
+# Calculate total model parameters
+total_params = sum(p.numel() for p in model.parameters())
+trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+# Prepare metadata dictionary
+model_metadata = {
+    'action_chunk_size': ACTION_CHUNK_SIZE,
+    'action_history_size': ACTION_HISTORY_SIZE,
+    'action_size': ACTION_SIZE,
+    'total_params': total_params,
+    'trainable_params': trainable_params,
+    'total_dataset_size': len(full_dataset),
+    'train_dataset_size': train_size,
+    'test_dataset_size': test_size,
+    'training_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+    'model_architecture': 'ActionResNet',
+    'class_names': CLASS_NAMES
+}
+
+print(f"\nModel Statistics:")
+print(f"  Total parameters: {total_params:,}")
+print(f"  Trainable parameters: {trainable_params:,}")
+print(f"  Dataset size: {len(full_dataset):,} samples")
+print(f"  Training started: {model_metadata['training_date']}")
 
 for epoch in range(num_epochs):
     batch_start = time.time()
@@ -229,7 +255,12 @@ for epoch in range(num_epochs):
     epoch_test_losses.append(avg_test_loss)
 
     if avg_test_loss <= best_test_loss:
-        torch.save(model.state_dict(), MODEL_SAVE_PATH+MODEL_NAME+"_best.pt")
+        torch.save({
+            'model_state_dict': model.state_dict(),
+            'metadata': model_metadata,
+            'epoch': epoch + 1,
+            'best_test_loss': avg_test_loss
+        }, MODEL_SAVE_PATH+MODEL_NAME+"_best.pt")
         best_test_loss = avg_test_loss
         patience_counter = 0
     else:
@@ -239,7 +270,12 @@ for epoch in range(num_epochs):
 
     scheduler.step(avg_test_loss)
 
-    torch.save(model.state_dict(), MODEL_SAVE_PATH+MODEL_NAME+"_latest.pt")
+    torch.save({
+        'model_state_dict': model.state_dict(),
+        'metadata': model_metadata,
+        'epoch': epoch + 1,
+        'last_test_loss': avg_test_loss
+    }, MODEL_SAVE_PATH+MODEL_NAME+"_latest.pt")
 
 plt.figure(figsize=(15, 5))
 

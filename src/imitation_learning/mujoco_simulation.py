@@ -9,6 +9,7 @@ from datasets.zima_dataset import ZimaDataset
 from models.action_resnet import ActionResNet
 from pynput import keyboard
 import sys
+import torch
 sys.path.append(".")#hack to use all packages in this directory
 
 model = mujoco.MjModel.from_xml_path("sim/scenes/simple_scene.xml")
@@ -44,45 +45,20 @@ dt = 1.0 / physics_fps
 model.opt.timestep = dt
 
 camera_fps = 30
-data_sample_fps = 10
+data_sample_fps = 30
 capture_interval = 1.0 / camera_fps
 data_sample_interval = 1.0 / data_sample_fps
 last_capture_time = 0
 last_data_time = 0
 
-def move_item_random_front_arc(item_name, distance_range=(1.5, 3.0), front_angle=120, exclude_center=30):
-    """Move item to random position in front arc, always visible but requiring turning.
-    
+def move_item(item_name, x, y, z=0.3, randomize_orientation=False):
+    """Move a named item to specified position.
+
     Args:
         item_name: Name of the body to move
-        distance_range: (min_distance, max_distance) from robot origin
-        front_angle: Total angle in degrees of front arc (centered at 0°)
-        exclude_center: Angle in degrees to exclude directly in front
+        x, y, z: Position coordinates
+        randomize_orientation: If True, randomize the z-axis rotation
     """
-    # Sample distance
-    distance = np.random.uniform(distance_range[0], distance_range[1])
-    
-    # Sample angle within front arc but excluding center
-    half_arc = np.deg2rad(front_angle / 2)
-    half_exclude = np.deg2rad(exclude_center / 2)
-    
-    # Sample from left or right side of the arc
-    if np.random.random() < 0.5:
-        # Left side: [half_exclude, half_arc]
-        angle = np.random.uniform(half_exclude, half_arc)
-    else:
-        # Right side: [-half_arc, -half_exclude]
-        angle = np.random.uniform(-half_arc, -half_exclude)
-    
-    # Convert polar to cartesian
-    x = distance * np.cos(angle)
-    y = distance * np.sin(angle)
-    z = 0.01
-    
-    move_item(item_name, x, y, z)
-
-def move_item(item_name, x, y, z=0.3):
-    """Move a named item to specified position."""
     body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, item_name)
     if body_id == -1:
         print(f"{item_name} not found!")
@@ -93,22 +69,17 @@ def move_item(item_name, x, y, z=0.3):
     dof_addr = model.jnt_dofadr[joint_id]
 
     mjdata.qpos[qpos_addr:qpos_addr+3] = [x, y, z]
-    mjdata.qpos[qpos_addr+3:qpos_addr+7] = [1, 0, 0, 0]
+
+    if randomize_orientation:
+        # Random rotation around z-axis
+        angle = np.random.uniform(0, 2 * np.pi)
+        # Quaternion for rotation around z-axis: [cos(θ/2), 0, 0, sin(θ/2)]
+        mjdata.qpos[qpos_addr+3:qpos_addr+7] = [np.cos(angle/2), 0, 0, np.sin(angle/2)]
+    else:
+        mjdata.qpos[qpos_addr+3:qpos_addr+7] = [1, 0, 0, 0]
+
     mjdata.qvel[dof_addr:dof_addr+6] = 0
     mujoco.mj_forward(model, mjdata)
-
-def move_item_random(item_name, min_coords, max_coords):
-    """Move a named item to a random position within a 3D rectangular prism.
-
-    Args:
-        item_name: Name of the body to move
-        min_coords: (x_min, y_min, z_min) tuple
-        max_coords: (x_max, y_max, z_max) tuple
-    """
-    x = np.random.uniform(min_coords[0], max_coords[0])
-    y = np.random.uniform(min_coords[1], max_coords[1])
-    z = np.random.uniform(min_coords[2], max_coords[2])
-    move_item(item_name, x, y, z)
 
 def randomize_lights(min_lights=0, max_lights=None):
     """Randomly toggle ceiling lights on/off using normal distribution.
@@ -151,51 +122,68 @@ def randomize_rubiks_cubes():
     # Desk location (from room.xml, desk is at x=-1.15, y=0.5, desktop at z=0.2)
     desk_x = -1.15
     desk_y = 0.5
-    desk_z = 0.22  # Just above desktop
+    desk_z = 0.25  # Just above desktop
 
     for i in range(num_rubiks_cubes):
         cube_name = f"rubiks_cube{i + 1}"
 
         if i == random_cube_idx:
-            # Place this cube randomly in the room
+            # Place this cube randomly in the room with random orientation
             # Room bounds: approximately -1.5 to 1.5 in x and y, avoiding furniture
             x = np.random.uniform(-1.0, 1.0)
             y = np.random.uniform(-1.0, 1.0)
             z = 0.025  # Half the cube size (0.025) to sit on floor
-            move_item(cube_name, x, y, z)
+            move_item(cube_name, x, y, z, randomize_orientation=True)
         else:
-            # Stack cubes on desk
+            # Stack cubes on desk with random orientations
             # Calculate stack position (first cube on desk, then stack upward)
             desk_cube_idx = i if i < random_cube_idx else i - 1
             stack_height = desk_cube_idx * 0.05  # Each cube is 0.05 tall
-            move_item(cube_name, desk_x, desk_y, desk_z + stack_height)
+            move_item(cube_name, desk_x, desk_y, desk_z + stack_height, randomize_orientation=True)
 
 
 train_mode = True
-ACTION_CHUNK_SIZE = 4
-ACTION_HISTORY_SIZE = 4
+ACTION_HISTORY_SIZE = -1
 ACTION_SIZE = 4
+MODEL_PATH = "models/weights/action_resnet_latest.pt"
 
-dataset = ZimaDataset("datasets/data/orange_cube_PLEASEWORK.hdf5")
+def load_model():
+    """Load model and update global action parameters from model metadata."""
+    global ACTION_CHUNK_SIZE, ACTION_HISTORY_SIZE, ACTION_SIZE
+
+    checkpoint = torch.load(MODEL_PATH, weights_only=False)
+    ACTION_HISTORY_SIZE = checkpoint['metadata']['action_history_size']
+    ACTION_SIZE = checkpoint['metadata']['action_size']
+
+    return NNController(MODEL_PATH)
+
+dataset = ZimaDataset("datasets/data/rubiks_cube_navigation_sim.hdf5")
 controller = KeyboardController()
 action_history_buffer = []
 if not train_mode:
-    controller = NNController("models/weights/action_resnet_latest.pt", ACTION_CHUNK_SIZE, ACTION_HISTORY_SIZE, ACTION_SIZE)
+    controller = load_model()
 
 episode_data = {"images": [], "actions": []}
 save_episode = False
 discard_episode = False
 reset_episode = True
+update_controller = False
 box_spawn_range = 0.75
 
 def _on_press(key):
     global save_episode
     global discard_episode
+    global train_mode
+    global controller
+    global update_controller
     try:
         if key.char == 'o' and train_mode:
             save_episode = True
         if key.char == 'p':
             discard_episode = True
+        if key.char == 't':
+            update_controller=True
+            
     except AttributeError:
         pass
 
@@ -205,15 +193,26 @@ listener.start()
 with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_ui=False) as viewer:
     while viewer.is_running():
         if reset_episode:
-            move_item("robot_body", 0, 0, 0.01)
+            # Randomize robot spawn position (smaller range than cubes)
+            robot_x = np.random.uniform(-0.3, 0.3)
+            robot_y = np.random.uniform(-0.3, 0.3)
+            move_item("robot_body", robot_x, robot_y, 0.01, randomize_orientation=True)
             randomize_lights(min_lights=5)
             randomize_rubiks_cubes()
             action_history_buffer.clear()
             reset_episode = False
+        if update_controller:
+            train_mode = not train_mode
+            if train_mode:
+                controller = KeyboardController()
+                print("Switched to TRAIN mode controller")
+            else:
+                controller = load_model()
+                print("Switched to TEST mode controller")
+            update_controller = False
 
         step_start = time.time()
-        if train_mode:
-            controller.update(model, mjdata)
+        
         mujoco.mj_step(model, mjdata)
         viewer.sync()
 
@@ -221,8 +220,10 @@ with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_
             renderer.update_scene(mjdata, camera="front_camera")
             rgb_array = renderer.render()
             bgr_array = cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR)
-
-            if not train_mode:
+            
+            if train_mode:
+                controller.update(model, mjdata)
+            else:
                 if len(action_history_buffer) < ACTION_HISTORY_SIZE:
                     padding_needed = ACTION_HISTORY_SIZE - len(action_history_buffer)
                     action_history = np.zeros((padding_needed, ACTION_SIZE))
@@ -230,7 +231,7 @@ with mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_
                         action_history = np.concatenate([action_history, np.array(action_history_buffer)])
                 else:
                     action_history = np.array(action_history_buffer)
-
+                
                 controller.update(model, mjdata, rgb_array, action_history)
 
                 executed_action = ActionResNet.bin_action(controller.get_normalized_speeds())
