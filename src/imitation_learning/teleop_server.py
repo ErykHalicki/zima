@@ -5,6 +5,7 @@ import numpy as np
 from threading import Lock
 import os
 import logging
+import time
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'zima-teleop-secret'
@@ -55,6 +56,7 @@ def generate_frames():
                     frame_bytes = buffer.tobytes()
                     yield (b'--frame\r\n'
                            b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            time.sleep(0.01)
 
 @app.route('/')
 def index():

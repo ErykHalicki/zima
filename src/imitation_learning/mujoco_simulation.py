@@ -43,7 +43,7 @@ while True:
 print_to_terminal(f"Found {num_rubiks_cubes} rubiks cubes in the scene")
 
 # Create renderer for camera capture
-renderer = mujoco.Renderer(model, height=240, width=320)
+renderer = mujoco.Renderer(model, height=480, width=640)
 
 # Simulation parameters
 physics_fps = 2000
