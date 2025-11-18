@@ -5,7 +5,13 @@ import torch
 class NNController(Controller):
     def __init__(self, model_path):
         super().__init__()
-        self.device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
+        if torch.cuda.is_available():
+            self.device = "cuda"
+        elif torch.backends.mps.is_available():
+            self.device = "mps"
+        else:
+            self.device = "cpu"
+
 
         # Load checkpoint with metadata
         checkpoint = torch.load(model_path, weights_only=False)

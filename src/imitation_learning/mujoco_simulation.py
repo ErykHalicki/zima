@@ -173,6 +173,10 @@ episode_data = {"images": [], "actions": []}
 reset_episode = True
 box_spawn_range = 0.75
 
+fps_counter = 0
+fps_start_time = time.time()
+fps_report_interval = 3.0
+
 print_to_terminal("Teleop server started at http://localhost:5000")
 update_mode("TRAIN" if train_mode else "TEST")
 
@@ -212,6 +216,7 @@ try:
             viewer.sync()
 
         if mjdata.time - last_capture_time >= capture_interval:
+            fps_counter += 1
             renderer.update_scene(mjdata, camera="front_camera")
             rgb_array = renderer.render()
             bgr_array = cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR)
@@ -256,6 +261,12 @@ try:
             episode_data["images"].clear()
             episode_data["actions"].clear()
             reset_episode = True
+
+        if time.time() - fps_start_time >= fps_report_interval:
+            fps = fps_counter / (time.time() - fps_start_time)
+            print_to_terminal(f"Simulation FPS: {fps:.1f}")
+            fps_counter = 0
+            fps_start_time = time.time()
 
         time_until_next_step = dt - (time.time() - step_start)
         if time_until_next_step > 0:
