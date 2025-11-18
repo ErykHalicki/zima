@@ -56,7 +56,7 @@ def generate_frames():
                     frame_bytes = buffer.tobytes()
                     yield (b'--frame\r\n'
                            b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-            time.sleep(0.01)
+        time.sleep(0.01)
 
 @app.route('/')
 def index():
@@ -64,7 +64,7 @@ def index():
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Zima Teleoperation</title>
+    <title>Zima Mujoco</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
         body {
@@ -154,7 +154,7 @@ def index():
 </head>
 <body>
     <div class="container">
-        <h1>Zima Teleoperation Interface</h1>
+        <h1>Zima Mujoco Interface</h1>
 
         <div class="status">
             <div>Mode: <span class="mode" id="mode">TRAIN</span></div>

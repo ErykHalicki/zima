@@ -1,6 +1,8 @@
 import torch
 import torchvision
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  
 import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.optim as optim
@@ -12,6 +14,7 @@ import cv2
 from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from datetime import datetime
+import os
 
 def sample_transform(sample):
     '''
@@ -29,10 +32,11 @@ def sample_transform(sample):
 
     return sample
 
-def visualize_image(image_tensor):
+def visualize_image(image_tensor, save_path):
     '''
-    Visualizes a transformed image tensor using matplotlib
+    Visualizes a transformed image tensor using matplotlib and saves to file
     image_tensor: torch.Tensor of shape [C,H,W] normalized with ImageNet stats
+    save_path: path to save the plot
     '''
     mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
     std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
@@ -43,9 +47,12 @@ def visualize_image(image_tensor):
 
     image_np = image.permute(1, 2, 0).numpy()
 
+    plt.figure()
     plt.imshow(image_np)
     plt.axis('off')
-    plt.show() 
+    plt.savefig(save_path, bbox_inches='tight', dpi=150)
+    plt.close()
+    print(f"Saved sample images to {save_path}") 
 
 if torch.cuda.is_available():
     device = "cuda"
@@ -55,19 +62,40 @@ else:
     device = "cpu"
 print(f"Using {device} device")
 
-ACTION_CHUNK_SIZE = 10
-ACTION_HISTORY_SIZE = 10
-ACTION_SIZE = 4
+#RESUME_MODEL_PATH = None  
+RESUME_MODEL_PATH = "models/weights/action_resnet_latest.pt"
 
-full_dataset = ZimaTorchDataset(file_path="datasets/data/rubiks_cube_navigation_sim.hdf5", 
+if RESUME_MODEL_PATH is not None:
+    print(f"\nLoading model configuration from: {RESUME_MODEL_PATH}")
+    checkpoint = torch.load(RESUME_MODEL_PATH, weights_only=False, map_location=device)
+    metadata = checkpoint.get('metadata', {})
+    ACTION_CHUNK_SIZE = metadata.get('action_chunk_size', 10)
+    ACTION_HISTORY_SIZE = metadata.get('action_history_size', 10)
+    ACTION_SIZE = metadata.get('action_size', 4)
+    print(f"Loaded hyperparameters from checkpoint:")
+else:
+    ACTION_CHUNK_SIZE = 10
+    ACTION_HISTORY_SIZE = 10
+    ACTION_SIZE = 4
+    print(f"Loaded default hyperparameters:")
+
+print(f"\tACTION_CHUNK_SIZE: {ACTION_CHUNK_SIZE}")
+print(f"\tACTION_HISTORY_SIZE: {ACTION_HISTORY_SIZE}")
+print(f"\tACTION_SIZE: {ACTION_SIZE}")
+
+DATASET_PATH = "datasets/data/rubiks_cube_navigation_sim_resized.hdf5"
+
+print(f"Using dataset: {DATASET_PATH}")
+
+full_dataset = ZimaTorchDataset(file_path=DATASET_PATH, 
                                 sample_transform=sample_transform,
-                                max_cached_episodes=150,
+                                max_cached_episodes=250,
                                 max_cached_images = 0,
                                 action_chunk_size = ACTION_CHUNK_SIZE,
                                 action_history_size = ACTION_HISTORY_SIZE)
 
-train_size = int(0.80 * len(full_dataset))
-test_size = int(0.2 * len(full_dataset))
+train_size = int(0.9 * len(full_dataset))
+test_size = int(0.1 * len(full_dataset))
 null_set_size = len(full_dataset) - test_size - train_size
 
 train_dataset, test_dataset, null_set = random_split(
@@ -78,10 +106,6 @@ train_dataset, test_dataset, null_set = random_split(
 
 train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True, pin_memory = True)
 test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=False)
-
-sample_images = next(iter(train_dataloader))["image"].to(device)
-
-visualize_image(torchvision.utils.make_grid(sample_images))
 
 all_actions = []
 for i in range(full_dataset.num_episodes):
@@ -100,19 +124,29 @@ class_weights = torch.from_numpy(np.array(class_weights, dtype=np.float32)).to(d
 print(f"class weights: {class_weights}")
 
 model = ActionResNet(ACTION_CHUNK_SIZE, ACTION_HISTORY_SIZE, ACTION_SIZE).to(device)
-#loss_criterion = nn.CrossEntropyLoss(weight=class_weights)
-loss_criterion = nn.CrossEntropyLoss()
+
+# Load existing weights if RESUME_MODEL_PATH is set
+if RESUME_MODEL_PATH is not None:
+    print(f"\nLoading model weights...")
+    model.load_state_dict(checkpoint['model_state_dict'])
+    print(f"Successfully loaded weights from epoch {checkpoint.get('epoch', 'unknown')}")
+    if 'best_test_loss' in checkpoint:
+        print(f"Previous best test loss: {checkpoint['best_test_loss']:.4f}")
+    print("Resuming training from checkpoint\n")
+
+loss_criterion = nn.CrossEntropyLoss(weight=class_weights)
+#loss_criterion = nn.CrossEntropyLoss()
 
 optimizer = optim.AdamW([
     {'params': model.feature_extractor.parameters(), 'lr': 1e-5},      # pretrained, small updates
-    {'params': model.action_head.parameters(), 'lr': 3e-4}   # random init, larger updates
+    {'params': model.action_head.parameters(), 'lr': 1e-4}   # random init, larger updates
 ], weight_decay=0.01)
 
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(
     optimizer, mode='min', factor=0.5, patience=5
 )
 
-num_epochs = 10
+num_epochs = 15
 max_plateaued_epochs = 5
 patience_counter = 0
 
@@ -126,11 +160,18 @@ MODEL_SAVE_PATH = "models/weights/"
 MODEL_NAME = "action_resnet"
 CLASS_NAMES = ["stop", "forward", "right", "left"]
 
-# Calculate total model parameters
+TIMESTAMP = datetime.now().strftime('%Y%m%d_%H%M%S')
+PLOTS_DIR = os.path.join(MODEL_SAVE_PATH, "plots",TIMESTAMP)
+os.makedirs(PLOTS_DIR, exist_ok=True)
+
+sample_images = next(iter(train_dataloader))["image"].to(device)
+
+sample_images_path = os.path.join(PLOTS_DIR, f"sample_images.png")
+visualize_image(torchvision.utils.make_grid(sample_images), sample_images_path)
+
 total_params = sum(p.numel() for p in model.parameters())
 trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-# Prepare metadata dictionary
 model_metadata = {
     'action_chunk_size': ACTION_CHUNK_SIZE,
     'action_history_size': ACTION_HISTORY_SIZE,
@@ -196,12 +237,11 @@ for epoch in range(num_epochs):
         pbar.set_postfix(postfix_dict)
         batch_start = time.time()
 
-    # Calculate and print training per-class accuracy
     train_all_predictions = torch.cat(train_all_predictions)
     train_all_targets = torch.cat(train_all_targets)
 
     print(f"\nEpoch {epoch+1}/{num_epochs} - Training Metrics:")
-    print(f"  Overall Accuracy: {(train_all_predictions == train_all_targets).float().mean():.4f}")
+    print(f"  Overall TRAIN Accuracy: {(train_all_predictions == train_all_targets).float().mean():.4f}")
     print("  Per-class Accuracy:")
     for class_idx, class_name in enumerate(CLASS_NAMES):
         class_mask = train_all_targets == class_idx
@@ -235,6 +275,7 @@ for epoch in range(num_epochs):
 
         test_loss = loss.item()
         batch_test_losses.append(test_loss)
+        epoch_test_losses.append(test_loss)
         test_pbar.set_postfix({"loss": f"{np.mean(batch_test_losses):.4f}"})
 
     # Calculate and print test per-class accuracy
@@ -243,8 +284,7 @@ for epoch in range(num_epochs):
 
     avg_test_loss = np.mean(batch_test_losses)
     print(f"\nEpoch {epoch+1}/{num_epochs} - Test Metrics:")
-    print(f"  Average Test Loss: {avg_test_loss:.4f}")
-    print(f"  Overall Accuracy: {(test_all_predictions == test_all_targets).float().mean():.4f}")
+    print(f"  Overall TEST Accuracy: {(test_all_predictions == test_all_targets).float().mean():.4f}")
     print("  Per-class Accuracy:")
     for class_idx, class_name in enumerate(CLASS_NAMES):
         class_mask = test_all_targets == class_idx
@@ -255,7 +295,6 @@ for epoch in range(num_epochs):
         else:
             print(f"    {class_name:8s} ({class_idx}): N/A (0 samples)")
 
-    epoch_test_losses.append(avg_test_loss)
 
     if avg_test_loss <= best_test_loss:
         torch.save({
@@ -280,23 +319,29 @@ for epoch in range(num_epochs):
         'last_test_loss': avg_test_loss
     }, MODEL_SAVE_PATH+MODEL_NAME+"_latest.pt")
 
-plt.figure(figsize=(15, 5))
+    plt.figure(figsize=(10, 5))
 
-plt.subplot(1, 3, 1)
-plt.plot(batch_losses, label='Training Loss')
-plt.xlabel('Batch')
-plt.ylabel('Loss')
-plt.title('Training Loss')
-plt.legend()
-plt.grid(True)
+    plt.subplot(1, 5, 1)
+    plt.plot(batch_losses, label='Training Loss')
+    plt.xlabel('Batch')
+    plt.ylabel('Loss')
+    plt.title('Training Loss')
+    plt.legend()
+    plt.grid(True)
 
-plt.subplot(1, 3, 2)
-plt.plot(epoch_test_losses, label='Test Loss', color='orange')
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.title('Test Loss')
-plt.legend()
-plt.grid(True)
+    plt.subplot(1, 5, 2)
+    plt.plot(epoch_test_losses, label='Test Loss', color='orange')
+    plt.xlabel('Batch')
+    plt.ylabel('Loss')
+    plt.title('Test Loss')
+    plt.legend()
+    plt.grid(True)
 
-plt.tight_layout()
-plt.show()
+    plt.tight_layout()
+    training_loss_plot_path = os.path.join(PLOTS_DIR, f"training_loss.png")
+    plt.savefig(training_loss_plot_path, dpi=150)
+    plt.close()
+    print(f"Saved training loss plots to {training_loss_plot_path}")
+
+
+

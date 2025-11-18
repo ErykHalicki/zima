@@ -178,7 +178,7 @@ fps_start_time = time.time()
 fps_report_interval = 3.0
 
 print_to_terminal("Teleop server started at http://localhost:5000")
-update_mode("TRAIN" if train_mode else "TEST")
+update_mode("TRAIN" if train_mode else "AUTONOMOUS TEST")
 
 if SPAWN_VIEWER:
     viewer = mujoco.viewer.launch_passive(model, mjdata, show_left_ui=False, show_right_ui=False)
@@ -206,8 +206,8 @@ try:
                 update_mode("TRAIN")
             else:
                 controller = load_model()
-                print_to_terminal("Switched to TEST mode")
-                update_mode("TEST")
+                print_to_terminal("Switched to AUTONOMOUS TEST mode")
+                update_mode("AUTONOMOUS TEST")
 
         step_start = time.time()
 

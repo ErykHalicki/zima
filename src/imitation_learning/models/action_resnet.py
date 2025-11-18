@@ -29,16 +29,16 @@ class ActionResNet(nn.Module):
         self.feature_extractor = nn.Sequential(*list(resnet.children())[:-1])
 
         self.action_head = nn.Sequential(
-            nn.Linear(512+action_history_size*action_size, 256),  # ResNet18 outputs 512 features + we input the action hitosry
+            nn.Linear(512+action_history_size*action_size, 512),  # ResNet18 outputs 512 features + we input the action hitosry
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(512,256),
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(256,128),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(128,64),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(64, action_size*action_chunk_size) 
+            nn.Linear(128, action_size*action_chunk_size) 
             # Output: [B, action_chunk_size * action_size]
             #output later gets transformed into [B, action_chunk_size, action_size]
         )
