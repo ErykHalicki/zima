@@ -24,6 +24,7 @@ class TeleopController(ControllerBase):
             "images": [],
             "actions": []
         }
+        self.last_action_time = None
 
         self.timer = self.create_timer(1.0 / update_rate, self.control_loop)
 
@@ -53,26 +54,41 @@ class TeleopController(ControllerBase):
         right = state['right']
 
         wheel_speeds = np.array([0.0, 0.0])
+        action_taken = False
 
         if forward > 0 and backward == 0 and left == 0 and right == 0:
             self.forward()
             wheel_speeds = np.array([1.0, 1.0])
+            action_taken = True
         elif backward > 0 and forward == 0 and left == 0 and right == 0:
             self.backward()
             wheel_speeds = np.array([-1.0, -1.0])
+            action_taken = True
         elif left > 0 and forward == 0 and backward == 0 and right == 0:
             self.turn_left()
             wheel_speeds = np.array([-1.0, 1.0])
+            action_taken = True
         elif right > 0 and forward == 0 and backward == 0 and left == 0:
             self.turn_right()
             wheel_speeds = np.array([1.0, -1.0])
+            action_taken = True
         else:
             self.stop()
             wheel_speeds = np.array([0.0, 0.0])
 
+        if action_taken:
+            self.last_action_time = time.time()
+
         if self.current_image is not None:
             self.episode_data["images"].append(self.current_image.copy())
             self.episode_data["actions"].append(wheel_speeds)
+
+        if self.last_action_time is not None and (time.time() - self.last_action_time) > 60.0:
+            if len(self.episode_data["images"]) > 0:
+                print_to_terminal(f"Auto-clearing episode due to inactivity ({len(self.episode_data['images'])} frames discarded)")
+                self.episode_data["images"].clear()
+                self.episode_data["actions"].clear()
+            self.last_action_time = None
 
         if state['discard_episode']:
             print_to_terminal(f"Episode discarded ({len(self.episode_data['images'])} frames)")

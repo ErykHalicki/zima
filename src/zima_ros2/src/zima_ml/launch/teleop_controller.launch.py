@@ -25,7 +25,7 @@ def generate_launch_description():
 
     dataset_name_arg = DeclareLaunchArgument(
         'dataset_name',
-        default_value='default_dataset',
+        default_value='default_dataset.hdf5',
         description='Name of the dataset file'
     )
 
