@@ -8,6 +8,8 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from ament_index_python.packages import get_package_share_directory
+import os
 
 from zima_msgs.srv import SolveIK
 from geometry_msgs.msg import Pose
@@ -29,9 +31,19 @@ class IKService(Node):
             description='Position error threshold for IK solution in meters'
         )
         self.declare_parameter('position_error_threshold', 0.03, threshold_descriptor)
-        
-        # Load the URDF chain
-        self.chain = Chain.from_urdf_file("robot_arm_ikpy.urdf")
+
+        urdf_descriptor = ParameterDescriptor(
+            type=ParameterType.PARAMETER_STRING,
+            description='Path to URDF file for IK chain'
+        )
+
+        zima_controls_share = get_package_share_directory('zima_controls')
+        default_urdf_path = os.path.join(zima_controls_share, 'urdf', 'robot_arm_ikpy.urdf')
+
+        self.declare_parameter('urdf_path', default_urdf_path, urdf_descriptor)
+        urdf_path = self.get_parameter('urdf_path').get_parameter_value().string_value
+
+        self.chain = Chain.from_urdf_file(urdf_path)
         
         # Create the service
         self.srv = self.create_service(SolveIK, 'solve_inverse_kinematics', self.solve_ik_callback)

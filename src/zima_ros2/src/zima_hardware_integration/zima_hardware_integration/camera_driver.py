@@ -11,10 +11,27 @@ class CameraPublisher(Node):
         self.publisher_ = self.create_publisher(CompressedImage, 'camera/image_raw/compressed', 10)
         self.frame_count = 0
         self.last_log_time = self.get_clock().now()
-        
+
         self.latest_frame = None
         self.frame_lock = threading.Lock()
         self.running = True
+
+        self.declare_parameter('output_width', -1)
+        self.declare_parameter('output_height', -1)
+
+        output_width = self.get_parameter('output_width').get_parameter_value().integer_value
+        output_height = self.get_parameter('output_height').get_parameter_value().integer_value
+
+        if (output_width > 0 and output_height <= 0) or (output_width <= 0 and output_height > 0):
+            self.get_logger().error('Both output_width and output_height must be provided if one is set')
+            raise ValueError('Both output_width and output_height must be provided')
+
+        if output_width > 0 and output_height > 0:
+            self.output_size = (output_width, output_height)
+            self.get_logger().info(f'Image downscaling enabled: {output_width}x{output_height}')
+        else:
+            self.output_size = None
+            self.get_logger().info('Image downscaling disabled')
         
         # Open camera with V4L2 backend (skip GStreamer)
         self.cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
@@ -54,14 +71,20 @@ class CameraPublisher(Node):
                 with self.frame_lock:
                     self.latest_frame = frame
     
+    def downscale_image(self, frame):
+        if self.output_size is not None:
+            return cv2.resize(frame, self.output_size, interpolation=cv2.INTER_AREA)
+        return frame
+
     def publish_frame(self):
         """Timer callback to publish latest frame"""
         with self.frame_lock:
             if self.latest_frame is None:
                 return
             frame = self.latest_frame.copy()
-        
-        # Encode as JPEG
+
+        frame = self.downscale_image(frame)
+
         ret, jpeg = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
         if not ret:
             return
