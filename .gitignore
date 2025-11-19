@@ -51,11 +51,10 @@ qtcreator-*
 
 # Catkin custom files
 CATKIN_IGNORE
-.DS_Store
 .env
 
 **/.claude/settings.local.json
 
-**/.DS_Store
+**/*DS_Store*
 **/venv
 **.pt
