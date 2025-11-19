@@ -6,7 +6,7 @@ import os
 
 def generate_launch_description():
     update_rate_arg = DeclareLaunchArgument(
-        'update_rate',
+        'teleop_update_rate',
         default_value='30.0',
         description='Rate (Hz) at which to poll teleop control state'
     )
@@ -39,7 +39,7 @@ def generate_launch_description():
         executable='teleop_controller',
         name='teleop_controller',
         parameters=[{
-            'update_rate': LaunchConfiguration('update_rate'),
+            'update_rate': LaunchConfiguration('teleop_update_rate'),
             'max_speed': LaunchConfiguration('max_speed'),
             'dataset_path': dataset_path
         }],

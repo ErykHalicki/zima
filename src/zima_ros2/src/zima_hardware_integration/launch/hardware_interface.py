@@ -18,8 +18,8 @@ def generate_launch_description():
     )
     
     update_rate_arg = DeclareLaunchArgument(
-        'update_rate',
-        default_value='200.0',
+        'hardware_update_rate',
+        default_value='30.0',
         description='Rate (Hz) at which to read from serial port'
     )
 
@@ -43,7 +43,7 @@ def generate_launch_description():
         parameters=[{
             'serial_port': LaunchConfiguration('serial_port'),
             'baud_rate': LaunchConfiguration('baud_rate'),
-            'update_rate': LaunchConfiguration('update_rate'),
+            'update_rate': LaunchConfiguration('hardware_update_rate'),
             'timeout': 0.1
         }],
         output='screen'
