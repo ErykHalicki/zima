@@ -29,6 +29,7 @@ setup(
     entry_points={
         'console_scripts': [
             'nn_controller = zima_ml.nn_controller:main',
+            'teleop_controller = zima_ml.teleop_controller:main',
         ],
     },
 )

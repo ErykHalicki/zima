@@ -8,6 +8,7 @@ import os
 def generate_launch_description():
     zima_controls_dir = get_package_share_directory('zima_controls')
     zima_hardware_integration_dir = get_package_share_directory('zima_hardware_integration')
+    zima_ml_dir = get_package_share_directory('zima_ml')
 
     arm_control_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -21,7 +22,14 @@ def generate_launch_description():
         )
     )
 
+    teleop_controller_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(zima_ml_dir, 'launch', 'teleop_controller.launch.py')
+        )
+    )
+
     return LaunchDescription([
         arm_control_launch,
-        hardware_interface_launch
+        hardware_interface_launch,
+        teleop_controller_launch
     ])
