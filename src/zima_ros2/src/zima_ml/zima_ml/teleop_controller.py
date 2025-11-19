@@ -10,7 +10,7 @@ class TeleopController(ControllerBase):
     def __init__(self):
         super().__init__('teleop_controller')
 
-        self.declare_parameter('update_rate', 50.0)
+        self.declare_parameter('update_rate', 30.0)
         update_rate = self.get_parameter('update_rate').get_parameter_value().double_value
 
         self.server_thread = Thread(target=start_server, daemon=True)
@@ -82,6 +82,7 @@ class TeleopController(ControllerBase):
             save_start_time = time.time()
             episode_num = self.dataset.add_episode(self.episode_data)
             print_to_terminal(f"episode_{episode_num} saved with {len(self.episode_data['images'])} frames. Save time: {time.time()-save_start_time:.2f}s")
+            print_to_terminal(f'Dataset path: {self.dataset_path}')
             self.episode_data["images"].clear()
             self.episode_data["actions"].clear()
 
