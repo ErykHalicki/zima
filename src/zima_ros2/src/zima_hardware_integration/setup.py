@@ -28,6 +28,7 @@ setup(
             "command_generator=zima_hardware_integration.command_generator:main",
             "joy_control=zima_hardware_integration.joy_control:main",
             "joy_tester=zima_hardware_integration.joy_tester:main",
+            "camera_driver=zima_hardware_integration.camera_driver:main",
         ],
     },
 )

@@ -22,7 +22,19 @@ def generate_launch_description():
         default_value='200.0',
         description='Rate (Hz) at which to read from serial port'
     )
-    
+
+    output_width_arg = DeclareLaunchArgument(
+        'output_width',
+        default_value='224',
+        description='Camera output width (both width and height required if set)'
+    )
+
+    output_height_arg = DeclareLaunchArgument(
+        'output_height',
+        default_value='224',
+        description='Camera output height (both width and height required if set)'
+    )
+
     # Create node configurations
     serial_receiver_node = Node(
         package='zima_hardware_integration',
@@ -55,13 +67,27 @@ def generate_launch_description():
         name='command_generator_node',
         output='screen'
     )
-    
+
+    camera_driver_node = Node(
+        package='zima_hardware_integration',
+        executable='camera_driver',
+        name='camera_publisher',
+        parameters=[{
+            'output_width': LaunchConfiguration('output_width'),
+            'output_height': LaunchConfiguration('output_height')
+        }],
+        output='screen'
+    )
+
     # Create and return launch description
     return LaunchDescription([
         serial_port_arg,
         baud_rate_arg,
         update_rate_arg,
+        output_width_arg,
+        output_height_arg,
         serial_receiver_node,
         serial_sender_node,
-        command_generator_node
+        command_generator_node,
+        camera_driver_node
     ])
