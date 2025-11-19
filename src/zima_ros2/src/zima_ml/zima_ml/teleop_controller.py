@@ -1,5 +1,5 @@
 from zima_ml.controller_base import ControllerBase
-from zima_ml.teleop_server import start_server, get_control_state
+from zima_ml.teleop_server import start_server, get_control_state, set_camera_frame
 import rclpy
 from threading import Thread
 
@@ -17,6 +17,10 @@ class TeleopController(ControllerBase):
         self.get_logger().info(f'Control update rate: {update_rate} Hz')
 
         self.timer = self.create_timer(1.0 / update_rate, self.control_loop)
+
+    def camera_callback(self, msg):
+        rgb_array = self.bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='rgb8')
+        set_camera_frame(rgb_array)
 
     def control_loop(self):
         state = get_control_state()

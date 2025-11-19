@@ -2,17 +2,12 @@ from zima_ml.models.action_resnet import ActionResNet
 from zima_ml.controller_base import ControllerBase
 import torch
 import rclpy
-from sensor_msgs.msg import CompressedImage
-from cv_bridge import CvBridge
 import numpy as np
 
 class NNController(ControllerBase):
     def __init__(self):
         super().__init__('nn_controller')
 
-        self.camera_sub = self.create_subscription(CompressedImage, '/camera/image_raw/compressed', self.camera_callback, 10)
-
-        self.bridge = CvBridge()
         self.action_history_buffer = []
         self.processing_image = False
 
