@@ -82,9 +82,9 @@ class CommandGeneratorNode(Node):
         # Map motor ID and action to subsystem ID
         if msg.motor_id == msg.MOTOR_LEFT:
             if msg.action == msg.ACTION_FORWARD:
-                command.subsystem = 9  # Left motor reverse - since the motors are inverted irl
+                command.subsystem = 8  # Left motor forward
             elif msg.action == msg.ACTION_REVERSE:
-                command.subsystem = 8  # Left motor forward - since the motors are inverted
+                command.subsystem = 9  # Left motor reverse
             elif msg.action == msg.ACTION_STOP:
                 command.subsystem = 10  # Left motor stop
             else:
@@ -92,9 +92,9 @@ class CommandGeneratorNode(Node):
                 return
         elif msg.motor_id == msg.MOTOR_RIGHT:
             if msg.action == msg.ACTION_FORWARD:
-                command.subsystem = 11  # Right motor forward
+                command.subsystem = 12  # Right motor reverse - motor inverted irl
             elif msg.action == msg.ACTION_REVERSE:
-                command.subsystem = 12  # Right motor reverse
+                command.subsystem = 11  # Right motor forward
             elif msg.action == msg.ACTION_STOP:
                 command.subsystem = 13  # Right motor stop
             else:

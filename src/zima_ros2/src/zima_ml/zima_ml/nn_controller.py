@@ -97,7 +97,9 @@ class NNController(Node):
         # Sample action from softmax distribution instead of taking argmax
         next_action = torch.multinomial(action_probs[0][0], num_samples=1).item()
         action_prob = action_probs[0][0][next_action].item()
-        self.get_logger().info(f"Executing action: {next_action} with probability: {action_prob:.3f}")
+        if len(self.action_history_buffer) > 0:
+            if next_action != np.argmax(self.action_history_buffer[-1]):
+                self.get_logger().info(f"Executing action: {next_action} with probability: {action_prob:.3f}")
 
         if next_action == 0:
             self.stop()
