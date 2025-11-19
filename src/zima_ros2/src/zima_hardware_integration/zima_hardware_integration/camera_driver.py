@@ -104,7 +104,7 @@ class CameraPublisher(Node):
         elapsed = (current_time - self.last_log_time).nanoseconds / 1e9
         if elapsed >= 1.0:
             fps = self.frame_count / elapsed
-            self.get_logger().info(f'Publishing at: {fps:.2f} fps')
+            self.get_logger().debug(f'Publishing at: {fps:.2f} fps')
             self.frame_count = 0
             self.last_log_time = current_time
     
