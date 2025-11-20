@@ -5,6 +5,7 @@ import rclpy
 from threading import Thread
 import numpy as np
 import time
+import cv2
 
 class TeleopController(ControllerBase):
     def __init__(self):
@@ -43,7 +44,8 @@ class TeleopController(ControllerBase):
     def camera_callback(self, msg):
         bgr_array = self.bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8')
         self.current_image = bgr_array
-        set_camera_frame(bgr_array)
+        upscaled_frame = cv2.resize(bgr_array, (800,800), interpolation=cv2.INTER_AREA)
+        set_camera_frame(upscaled_frame)
 
     def control_loop(self):
         state = get_control_state()
@@ -79,7 +81,7 @@ class TeleopController(ControllerBase):
         if action_taken:
             self.last_action_time = time.time()
 
-        if self.current_image is not None:
+        if self.current_image is not None and self.last_action_time is not None:
             self.episode_data["images"].append(self.current_image.copy())
             self.episode_data["actions"].append(wheel_speeds)
 
