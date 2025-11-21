@@ -26,6 +26,7 @@ class TeleopController(ControllerBase):
             "actions": []
         }
         self.last_action_time = None
+        self.executed_action_last_step = False
 
         self.timer = self.create_timer(1.0 / update_rate, self.control_loop)
 
@@ -74,12 +75,14 @@ class TeleopController(ControllerBase):
             self.turn_right()
             wheel_speeds = np.array([1.0, -1.0])
             action_taken = True
-        else:
+        elif self.executed_action_last_step:
             self.stop()
             wheel_speeds = np.array([0.0, 0.0])
+            self.executed_action_last_step = False
 
         if action_taken:
             self.last_action_time = time.time()
+            self.executed_action_last_step = True
 
         if self.current_image is not None and self.last_action_time is not None:
             self.episode_data["images"].append(self.current_image.copy())
