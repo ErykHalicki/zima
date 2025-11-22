@@ -33,19 +33,15 @@ class CameraPublisher(Node):
             self.output_size = None
             self.get_logger().info('Image downscaling disabled')
         
-        # Open camera with V4L2 backend (skip GStreamer)
         self.cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
         
-        # Force MJPEG format for 30fps
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M','J','P','G'))
         self.cap.set(cv2.CAP_PROP_FPS, 30)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 2048)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1536)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
         
-        # Disable buffering - read latest frame only
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         
-        # Check actual FPS
         actual_fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.get_logger().info(f'Camera FPS setting: {actual_fps}')
         
