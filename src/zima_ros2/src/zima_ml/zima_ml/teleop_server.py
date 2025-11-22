@@ -64,7 +64,7 @@ def index():
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Zima Mujoco</title>
+    <title>Zima Teleoperation</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
         body {
@@ -154,7 +154,7 @@ def index():
 </head>
 <body>
     <div class="container">
-        <h1>Zima Mujoco Interface</h1>
+        <h1>Zima Teleop Interface</h1>
 
         <div class="status">
             <div>Mode: <span class="mode" id="mode">TRAIN</span></div>
