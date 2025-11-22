@@ -25,7 +25,7 @@ class ZimaDataset:
                 if last_key:
                     if len(new_episode_dict[key]) != len(new_episode_dict[last_key]):
                         raise Exception(f"Length of {key} doesnt match {last_key}!")
-                ep.create_dataset(key, data=np.array(new_episode_dict[key]), compression=None)
+                ep.create_dataset(key, data=np.array(new_episode_dict[key]), compression="lzf")
                 last_key = key
         self.num_episodes+=1
         return self.num_episodes-1
