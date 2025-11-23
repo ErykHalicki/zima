@@ -40,15 +40,6 @@ class CameraPublisher(Node):
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         self.cap.set(cv2.CAP_PROP_FPS, 25)
         
-        subprocess.run([
-            'v4l2-ctl', '-d', '/dev/video0',
-            '--set-ctrl=brightness=64',
-            '--set-ctrl=contrast=50',
-            '--set-ctrl=gain=50',
-            '--set-ctrl=auto_exposure=1',
-            '--set-ctrl=exposure_time_absolute=20'
-        ], check=True)
-
         actual_fps = self.cap.get(cv2.CAP_PROP_FPS)
 
         if not self.cap.isOpened():
