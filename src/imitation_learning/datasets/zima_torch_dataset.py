@@ -10,7 +10,8 @@ class ZimaTorchDataset(ZimaDataset, Dataset):
                  max_cached_episodes=5, 
                  max_cached_images=10000, 
                  action_chunk_size=1,
-                 action_history_size=0):
+                 action_history_size=0,
+                 image_history_size=0):
         '''
         file_path: path to hdf5 Dataset
         sample_transform: transform function that takes in a sample dict 
@@ -37,6 +38,7 @@ class ZimaTorchDataset(ZimaDataset, Dataset):
         self.max_cached_transforms = max_cached_images
         self.action_chunk_size = action_chunk_size
         self.action_history_size = action_history_size
+        self.image_history_size = image_history_size
 
     def __len__(self):
         return self.episode_boundaries[-1]
@@ -72,6 +74,20 @@ class ZimaTorchDataset(ZimaDataset, Dataset):
 
         episode = self._get_cached_episode(episode_num)
 
+        image_start_idx = idx_in_episode - self.image_history_size
+
+        if image_start_idx < 0:
+            available_history = idx_in_episode + 1
+            images = episode["images"][0:idx_in_episode + 1].copy()
+
+            history_padding_needed = self.image_history_size - available_history + 1
+            if history_padding_needed > 0:
+                first_image = episode["images"][0]
+                image_padding = np.repeat(first_image[np.newaxis, ...], history_padding_needed, axis=0)
+                images = np.concatenate([image_padding, images], axis=0)
+        else:
+            images = episode["images"][image_start_idx:idx_in_episode + 1].copy()
+
         # Get action history (past actions before idx, not including idx) with padding if needed
 
         history_start_idx = idx_in_episode - self.action_history_size
@@ -101,7 +117,7 @@ class ZimaTorchDataset(ZimaDataset, Dataset):
         else:
             future_actions = episode["actions"][idx_in_episode:future_end_idx].copy()
 
-        sample = {"image": episode["images"][idx_in_episode].copy(),
+        sample = {"images": images,
                   "action_history": history_actions,
                   "action_chunk": future_actions}
 
