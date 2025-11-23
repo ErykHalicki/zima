@@ -13,7 +13,7 @@ class ControllerBase(Node):
 
         self.bridge = CvBridge()
 
-        self.declare_parameter('max_speed', 255)
+        self.declare_parameter('max_speed', 180)
         self.max_speed = self.get_parameter('max_speed').get_parameter_value().integer_value
 
     def camera_callback(self, msg):

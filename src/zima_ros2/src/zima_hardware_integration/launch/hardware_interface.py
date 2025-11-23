@@ -25,13 +25,13 @@ def generate_launch_description():
 
     output_width_arg = DeclareLaunchArgument(
         'output_width',
-        default_value='224',
+        default_value='640',
         description='Camera output width (both width and height required if set)'
     )
 
     output_height_arg = DeclareLaunchArgument(
         'output_height',
-        default_value='224',
+        default_value='480',
         description='Camera output height (both width and height required if set)'
     )
 

@@ -34,17 +34,19 @@ class CameraPublisher(Node):
             self.get_logger().info('Image downscaling disabled')
         
         self.cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
-        
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M','J','P','G'))
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         self.cap.set(cv2.CAP_PROP_FPS, 30)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
         
+        self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
+
+        self.cap.set(cv2.CAP_PROP_EXPOSURE, 10)
+
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        
+
         actual_fps = self.cap.get(cv2.CAP_PROP_FPS)
-        self.get_logger().info(f'Camera FPS setting: {actual_fps}')
-        
+
         if not self.cap.isOpened():
             self.get_logger().error('Failed to open camera')
             return
@@ -56,7 +58,7 @@ class CameraPublisher(Node):
         self.capture_thread.start()
         
         # Publish on timer for stable rate
-        self.timer = self.create_timer(0.033, self.publish_frame)  # ~30 Hz
+        self.timer = self.create_timer(1./actual_fps, self.publish_frame)
     
     def capture_loop(self):
         """Dedicated thread for capturing frames as fast as possible"""
