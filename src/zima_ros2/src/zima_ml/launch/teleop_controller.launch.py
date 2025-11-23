@@ -7,13 +7,13 @@ import os
 def generate_launch_description():
     update_rate_arg = DeclareLaunchArgument(
         'teleop_update_rate',
-        default_value='30.0',
+        default_value='15.0',
         description='Rate (Hz) at which to poll teleop control state'
     )
 
     max_speed_arg = DeclareLaunchArgument(
         'max_speed',
-        default_value='180',
+        default_value='210',
         description='Maximum motor speed for teleop controller'
     )
 
