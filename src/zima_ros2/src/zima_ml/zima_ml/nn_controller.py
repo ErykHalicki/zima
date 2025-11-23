@@ -28,7 +28,7 @@ class NNController(ControllerBase):
             self.device = "cpu"
 
 
-        checkpoint = torch.load(model_path, weights_only=False)
+        checkpoint = torch.load(model_path, weights_only=False, map_location=self.device)
 
         metadata = checkpoint['metadata']
         self.action_chunk_size = metadata['action_chunk_size']
