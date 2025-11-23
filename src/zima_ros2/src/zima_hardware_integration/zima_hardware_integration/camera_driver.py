@@ -4,6 +4,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 import cv2
 import threading
+import subprocess
 
 class CameraPublisher(Node):
     def __init__(self):
@@ -37,13 +38,16 @@ class CameraPublisher(Node):
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M','J','P','G'))
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-        self.cap.set(cv2.CAP_PROP_FPS, 30)
+        self.cap.set(cv2.CAP_PROP_FPS, 25)
         
-        self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
-
-        self.cap.set(cv2.CAP_PROP_EXPOSURE, 10)
-
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        subprocess.run([
+            'v4l2-ctl', '-d', '/dev/video0',
+            '--set-ctrl=brightness=64',
+            '--set-ctrl=contrast=50',
+            '--set-ctrl=gain=50',
+            '--set-ctrl=auto_exposure=1',
+            '--set-ctrl=exposure_time_absolute=20'
+        ], check=True)
 
         actual_fps = self.cap.get(cv2.CAP_PROP_FPS)
 
