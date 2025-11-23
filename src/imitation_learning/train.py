@@ -22,11 +22,30 @@ def sample_transform(sample):
     Transforms image from sample to resnet format
     '''
     rgb_image = cv2.cvtColor(sample["image"], cv2.COLOR_BGR2RGB)
+
+    noise = np.random.normal(0, 10, rgb_image.shape).astype(np.uint8)
+    rgb_image = cv2.add(rgb_image, noise)
+
+    if np.random.random() < 0.3:
+        kernel_size = np.random.choice([3, 5, 7])
+        rgb_image = cv2.GaussianBlur(rgb_image, (kernel_size, kernel_size), 0)
+
+    if np.random.random() < 0.3:
+        hsv = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2HSV).astype(np.float32)
+        hue_shift = np.random.randint(-20, 20)
+        hsv[:, :, 0] = (hsv[:, :, 0] + hue_shift) % 180
+        rgb_image = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)
+
+    h, w = rgb_image.shape[:2]
+    crop_h = int(h * np.random.uniform(0.8, 1.0))
+    crop_w = int(w * np.random.uniform(0.8, 1.0))
+    start_h = np.random.randint(0, h - crop_h + 1)
+    start_w = np.random.randint(0, w - crop_w + 1)
+    rgb_image = rgb_image[start_h:start_h+crop_h, start_w:start_w+crop_w]
+    rgb_image = cv2.resize(rgb_image, (w, h))
+
     sample["image"] = ActionResNet.convert_image_to_resnet(rgb_image)
 
-    # bin all actions (action chunk and action history) into 1 of 5 classes (forward left right backward stop)
-    # action_history shape: [history_size, 2] -> [history_size, 5] (one-hot)
-    # action_chunk shape: [chunk_size, 2] -> [chunk_size, 1] (class index)
     sample["action_history"] = np.array([ActionResNet.bin_action(action) for action in sample["action_history"]], dtype=np.float32)
     sample["action_chunk"] = np.array([np.argmax(ActionResNet.bin_action(action)) for action in sample["action_chunk"]], dtype=np.int64)
 
@@ -62,28 +81,27 @@ else:
     device = "cpu"
 print(f"Using {device} device")
 
-#RESUME_MODEL_PATH = None  
-RESUME_MODEL_PATH = "models/weights/action_resnet_latest.pt"
+RESUME_MODEL_PATH = None
+#RESUME_MODEL_PATH = "models/weights/action_resnet_latest.pt"
+ACTION_CHUNK_SIZE = 5
+ACTION_HISTORY_SIZE = 5
+ACTION_SIZE = 4
+DATASET_PATH = "datasets/data/rubiks_cube_navigation_full_resized.hdf5"
 
 if RESUME_MODEL_PATH is not None:
     print(f"\nLoading model configuration from: {RESUME_MODEL_PATH}")
     checkpoint = torch.load(RESUME_MODEL_PATH, weights_only=False, map_location=device)
     metadata = checkpoint.get('metadata', {})
-    ACTION_CHUNK_SIZE = metadata.get('action_chunk_size', 10)
-    ACTION_HISTORY_SIZE = metadata.get('action_history_size', 10)
-    ACTION_SIZE = metadata.get('action_size', 4)
+    ACTION_CHUNK_SIZE = metadata.get('action_chunk_size', ACTION_CHUNK_SIZE)
+    ACTION_HISTORY_SIZE = metadata.get('action_history_size', ACTION_HISTORY_SIZE)
+    ACTION_SIZE = metadata.get('action_size', ACTION_SIZE)
     print(f"Loaded hyperparameters from checkpoint:")
 else:
-    ACTION_CHUNK_SIZE = 10
-    ACTION_HISTORY_SIZE = 10
-    ACTION_SIZE = 4
     print(f"Loaded default hyperparameters:")
 
 print(f"\tACTION_CHUNK_SIZE: {ACTION_CHUNK_SIZE}")
 print(f"\tACTION_HISTORY_SIZE: {ACTION_HISTORY_SIZE}")
 print(f"\tACTION_SIZE: {ACTION_SIZE}")
-
-DATASET_PATH = "datasets/data/rubiks_cube_navigation_sim_resized.hdf5"
 
 print(f"Using dataset: {DATASET_PATH}")
 
