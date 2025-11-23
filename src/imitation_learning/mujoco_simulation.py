@@ -151,15 +151,17 @@ def randomize_rubiks_cubes():
 train_mode = True
 ACTION_HISTORY_SIZE = -1
 ACTION_SIZE = 4
+IMAGE_HISTORY_SIZE = 0
 MODEL_PATH = "models/weights/action_resnet_latest.pt"
 
 def load_model():
     """Load model and update global action parameters from model metadata."""
-    global ACTION_CHUNK_SIZE, ACTION_HISTORY_SIZE, ACTION_SIZE
+    global ACTION_CHUNK_SIZE, ACTION_HISTORY_SIZE, ACTION_SIZE, IMAGE_HISTORY_SIZE
 
     checkpoint = torch.load(MODEL_PATH, weights_only=False)
     ACTION_HISTORY_SIZE = checkpoint['metadata']['action_history_size']
     ACTION_SIZE = checkpoint['metadata']['action_size']
+    IMAGE_HISTORY_SIZE = checkpoint['metadata'].get('image_history_size', 0)
 
     return NNController(MODEL_PATH)
 
@@ -196,6 +198,8 @@ try:
             randomize_lights(min_lights=5)
             randomize_rubiks_cubes()
             action_history_buffer.clear()
+            if not train_mode and hasattr(controller, 'image_history_buffer'):
+                controller.image_history_buffer.clear()
             reset_episode = False
 
         if control_state['toggle_mode']:

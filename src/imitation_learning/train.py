@@ -17,34 +17,10 @@ from datetime import datetime
 import os
 
 def sample_transform(sample):
-    '''
-    sample format: {"images": BGR np.array([480,640,3]), "actions": np.array([1,2])}
-    Transforms image from sample to resnet format
-    '''
-    rgb_image = cv2.cvtColor(sample["image"], cv2.COLOR_BGR2RGB)
+    rgb_images = [cv2.cvtColor(img, cv2.COLOR_BGR2RGB) for img in sample["images"]]
 
-    noise = np.random.normal(0, 10, rgb_image.shape).astype(np.uint8)
-    rgb_image = cv2.add(rgb_image, noise)
-
-    if np.random.random() < 0.3:
-        kernel_size = np.random.choice([3, 5, 7])
-        rgb_image = cv2.GaussianBlur(rgb_image, (kernel_size, kernel_size), 0)
-
-    if np.random.random() < 0.3:
-        hsv = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2HSV).astype(np.float32)
-        hue_shift = np.random.randint(-20, 20)
-        hsv[:, :, 0] = (hsv[:, :, 0] + hue_shift) % 180
-        rgb_image = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)
-
-    h, w = rgb_image.shape[:2]
-    crop_h = int(h * np.random.uniform(0.8, 1.0))
-    crop_w = int(w * np.random.uniform(0.8, 1.0))
-    start_h = np.random.randint(0, h - crop_h + 1)
-    start_w = np.random.randint(0, w - crop_w + 1)
-    rgb_image = rgb_image[start_h:start_h+crop_h, start_w:start_w+crop_w]
-    rgb_image = cv2.resize(rgb_image, (w, h))
-
-    sample["image"] = ActionResNet.convert_image_to_resnet(rgb_image)
+    transformed_images = [ActionResNet.convert_image_to_resnet(img) for img in rgb_images]
+    sample["images"] = torch.stack(transformed_images)
 
     sample["action_history"] = np.array([ActionResNet.bin_action(action) for action in sample["action_history"]], dtype=np.float32)
     sample["action_chunk"] = np.array([np.argmax(ActionResNet.bin_action(action)) for action in sample["action_chunk"]], dtype=np.int64)
@@ -83,9 +59,10 @@ print(f"Using {device} device")
 
 RESUME_MODEL_PATH = None
 #RESUME_MODEL_PATH = "models/weights/action_resnet_latest.pt"
-ACTION_CHUNK_SIZE = 5
-ACTION_HISTORY_SIZE = 5
+ACTION_CHUNK_SIZE = 10
+ACTION_HISTORY_SIZE = 20
 ACTION_SIZE = 4
+IMAGE_HISTORY_SIZE = 4
 DATASET_PATH = "datasets/data/rubiks_cube_navigation_full_resized.hdf5"
 
 if RESUME_MODEL_PATH is not None:
@@ -95,6 +72,7 @@ if RESUME_MODEL_PATH is not None:
     ACTION_CHUNK_SIZE = metadata.get('action_chunk_size', ACTION_CHUNK_SIZE)
     ACTION_HISTORY_SIZE = metadata.get('action_history_size', ACTION_HISTORY_SIZE)
     ACTION_SIZE = metadata.get('action_size', ACTION_SIZE)
+    IMAGE_HISTORY_SIZE = metadata.get('image_history_size', IMAGE_HISTORY_SIZE)
     print(f"Loaded hyperparameters from checkpoint:")
 else:
     print(f"Loaded default hyperparameters:")
@@ -102,15 +80,17 @@ else:
 print(f"\tACTION_CHUNK_SIZE: {ACTION_CHUNK_SIZE}")
 print(f"\tACTION_HISTORY_SIZE: {ACTION_HISTORY_SIZE}")
 print(f"\tACTION_SIZE: {ACTION_SIZE}")
+print(f"\tIMAGE_HISTORY_SIZE: {IMAGE_HISTORY_SIZE}")
 
 print(f"Using dataset: {DATASET_PATH}")
 
-full_dataset = ZimaTorchDataset(file_path=DATASET_PATH, 
+full_dataset = ZimaTorchDataset(file_path=DATASET_PATH,
                                 sample_transform=sample_transform,
                                 max_cached_episodes=250,
                                 max_cached_images = 0,
                                 action_chunk_size = ACTION_CHUNK_SIZE,
-                                action_history_size = ACTION_HISTORY_SIZE)
+                                action_history_size = ACTION_HISTORY_SIZE,
+                                image_history_size = IMAGE_HISTORY_SIZE)
 
 train_size = int(0.9 * len(full_dataset))
 test_size = int(0.1 * len(full_dataset))
@@ -122,8 +102,8 @@ train_dataset, test_dataset, null_set = random_split(
     generator=torch.Generator().manual_seed(514)
 )
 
-train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True, pin_memory = True)
-test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, pin_memory = True)
+test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=True, pin_memory = True)
 
 all_actions = []
 for i in range(full_dataset.num_episodes):
@@ -141,7 +121,7 @@ for action, count in zip(unique, counts):
 class_weights = torch.from_numpy(np.array(class_weights, dtype=np.float32)).to(device)
 print(f"class weights: {class_weights}")
 
-model = ActionResNet(ACTION_CHUNK_SIZE, ACTION_HISTORY_SIZE, ACTION_SIZE).to(device)
+model = ActionResNet(ACTION_CHUNK_SIZE, ACTION_HISTORY_SIZE, ACTION_SIZE, IMAGE_HISTORY_SIZE).to(device)
 
 # Load existing weights if RESUME_MODEL_PATH is set
 if RESUME_MODEL_PATH is not None:
@@ -182,10 +162,11 @@ TIMESTAMP = datetime.now().strftime('%Y%m%d_%H%M%S')
 PLOTS_DIR = os.path.join(MODEL_SAVE_PATH, "plots",TIMESTAMP)
 os.makedirs(PLOTS_DIR, exist_ok=True)
 
-sample_images = next(iter(train_dataloader))["image"].to(device)
+sample_images = next(iter(train_dataloader))["images"].to(device)
+sample_images_latest = sample_images[:, -1, :, :, :]
 
 sample_images_path = os.path.join(PLOTS_DIR, f"sample_images.png")
-visualize_image(torchvision.utils.make_grid(sample_images), sample_images_path)
+visualize_image(torchvision.utils.make_grid(sample_images_latest), sample_images_path)
 
 total_params = sum(p.numel() for p in model.parameters())
 trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -194,6 +175,7 @@ model_metadata = {
     'action_chunk_size': ACTION_CHUNK_SIZE,
     'action_history_size': ACTION_HISTORY_SIZE,
     'action_size': ACTION_SIZE,
+    'image_history_size': IMAGE_HISTORY_SIZE,
     'total_params': total_params,
     'trainable_params': trainable_params,
     'total_dataset_size': len(full_dataset),
@@ -219,7 +201,7 @@ for epoch in range(num_epochs):
     train_all_predictions = []
     train_all_targets = []
     for batch in pbar:
-        images = batch["image"].to(device)
+        images = batch["images"].to(device)
         action_histories = batch["action_history"].to(device)
         action_chunks = batch["action_chunk"].to(device)
 
@@ -276,7 +258,7 @@ for epoch in range(num_epochs):
     test_all_targets = []
     model.eval()
     for batch in test_pbar:
-        images = batch["image"].to(device)
+        images = batch["images"].to(device)
         action_histories = batch["action_history"].to(device)
         action_chunks = batch["action_chunk"].to(device)
         
