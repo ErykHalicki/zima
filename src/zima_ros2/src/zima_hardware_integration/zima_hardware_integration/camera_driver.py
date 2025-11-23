@@ -19,9 +19,15 @@ class CameraPublisher(Node):
 
         self.declare_parameter('output_width', -1)
         self.declare_parameter('output_height', -1)
+        self.declare_parameter('contrast', 1.0)
+        self.declare_parameter('denoise', True)
+        self.declare_parameter('denoise_strength', 10)
 
         output_width = self.get_parameter('output_width').get_parameter_value().integer_value
         output_height = self.get_parameter('output_height').get_parameter_value().integer_value
+        self.contrast = self.get_parameter('contrast').get_parameter_value().double_value
+        self.denoise = self.get_parameter('denoise').get_parameter_value().bool_value
+        self.denoise_strength = self.get_parameter('denoise_strength').get_parameter_value().integer_value
 
         if (output_width > 0 and output_height <= 0) or (output_width <= 0 and output_height > 0):
             self.get_logger().error('Both output_width and output_height must be provided if one is set')
@@ -33,6 +39,10 @@ class CameraPublisher(Node):
         else:
             self.output_size = None
             self.get_logger().info('Image downscaling disabled')
+
+        self.get_logger().info(f'Contrast adjustment: {self.contrast}')
+        if self.denoise:
+            self.get_logger().info(f'Denoising enabled with strength: {self.denoise_strength}')
         
         self.cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M','J','P','G'))
@@ -69,6 +79,20 @@ class CameraPublisher(Node):
             return cv2.resize(frame, self.output_size, interpolation=cv2.INTER_AREA)
         return frame
 
+    def apply_postprocessing(self, frame):
+        if self.denoise:
+            frame = cv2.fastNlMeansDenoisingColored(frame, None, self.denoise_strength, self.denoise_strength, 7, 21)
+
+        if self.contrast != 1.0:
+            lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+            l, a, b = cv2.split(lab)
+            l = cv2.equalizeHist(l)
+            l = cv2.convertScaleAbs(l, alpha=self.contrast, beta=0)
+            lab = cv2.merge([l, a, b])
+            frame = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+
+        return frame
+
     def publish_frame(self):
         """Timer callback to publish latest frame"""
         with self.frame_lock:
@@ -76,6 +100,7 @@ class CameraPublisher(Node):
                 return
             frame = self.latest_frame.copy()
 
+        frame = self.apply_postprocessing(frame)
         frame = self.downscale_image(frame)
 
         ret, jpeg = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
