@@ -55,13 +55,13 @@ else:
     device = "cpu"
 print(f"Using {device} device")
 
-RESUME_MODEL_PATH = None
-#RESUME_MODEL_PATH = "models/weights/action_resnet_latest.pt"
+#RESUME_MODEL_PATH = None
+RESUME_MODEL_PATH = "models/weights/action_resnet_latest.pt"
 ACTION_CHUNK_SIZE = 10
 ACTION_HISTORY_SIZE = 20
 ACTION_SIZE = 4
 IMAGE_HISTORY_SIZE = 3
-DATASET_PATH = "datasets/data/rubiks_cube_navigation_full_resized.hdf5"
+DATASET_PATH = "datasets/data/rubiks_cube_navigation_real_resized.hdf5"
 
 if RESUME_MODEL_PATH is not None:
     print(f"\nLoading model configuration from: {RESUME_MODEL_PATH}")
@@ -133,10 +133,16 @@ if RESUME_MODEL_PATH is not None:
 loss_criterion = nn.CrossEntropyLoss(weight=class_weights)
 #loss_criterion = nn.CrossEntropyLoss()
 
-optimizer = optim.AdamW([
-    {'params': model.feature_extractor.parameters(), 'lr': 1e-5},      # pretrained, small updates
-    {'params': model.action_head.parameters(), 'lr': 1e-4}   # random init, larger updates
-], weight_decay=0.01)
+if RESUME_MODEL_PATH == None:
+    optimizer = optim.AdamW([
+        {'params': model.feature_extractor.parameters(), 'lr': 1e-5},      # pretrained, small updates
+        {'params': model.action_head.parameters(), 'lr': 1e-4}   # random init, larger updates
+    ], weight_decay=0.01)
+else:
+    optimizer = optim.AdamW([
+        {'params': model.feature_extractor.parameters(), 'lr': 1e-7},      # pretrained, small updates
+        {'params': model.action_head.parameters(), 'lr': 1e-6}   # random init, larger updates
+    ], weight_decay=0.01)
 
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(
     optimizer, mode='min', factor=0.5, patience=5

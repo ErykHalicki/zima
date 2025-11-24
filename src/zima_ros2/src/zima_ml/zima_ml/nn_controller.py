@@ -12,7 +12,7 @@ class NNController(ControllerBase):
         self.processing_image = False
 
         self.declare_parameter('model_path', '')
-        self.declare_parameter('action_chunk_usage_ratio', 0.0)
+        self.declare_parameter('action_chunk_usage_ratio', 1.0)
 
         model_path = self.get_parameter('model_path').get_parameter_value().string_value
         self.action_chunk_usage_ratio = self.get_parameter('action_chunk_usage_ratio').get_parameter_value().double_value
@@ -114,11 +114,7 @@ class NNController(ControllerBase):
         next_action = torch.multinomial(self.action_chunk_buffer[self.action_chunk_index], num_samples=1).item()
         action_prob = self.action_chunk_buffer[self.action_chunk_index][next_action].item()
 
-        if len(self.action_history_buffer) > 0:
-            if next_action != np.argmax(self.action_history_buffer[-1]):
-                self.get_logger().info(f"Executing action: {next_action} (chunk step {self.action_chunk_index}/{chunk_usage_steps}) with probability: {action_prob:.3f}")
-        else:
-            self.get_logger().info(f"Executing action: {next_action} (chunk step {self.action_chunk_index}/{chunk_usage_steps}) with probability: {action_prob:.3f}")
+        self.get_logger().info(f"Executing action: {next_action} (chunk step {self.action_chunk_index}/{chunk_usage_steps}) with probability: {action_prob:.3f}")
 
         if next_action == 0:
             self.stop()
