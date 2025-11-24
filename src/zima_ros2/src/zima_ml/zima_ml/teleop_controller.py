@@ -43,9 +43,9 @@ class TeleopController(ControllerBase):
         print_to_terminal(f'Dataset path: {dataset_path}')
 
     def camera_callback(self, msg):
-        bgr_array = self.bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8')
-        self.current_image = bgr_array
-        upscaled_frame = cv2.resize(bgr_array, (800,800), interpolation=cv2.INTER_AREA)
+        rgb_array = self.bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='rgb8')
+        self.current_image = rgb_array
+        upscaled_frame = cv2.resize(rgb_array, (800,800), interpolation=cv2.INTER_AREA)
         set_camera_frame(upscaled_frame)
 
     def control_loop(self):

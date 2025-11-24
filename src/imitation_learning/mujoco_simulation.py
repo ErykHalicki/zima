@@ -224,7 +224,7 @@ try:
             renderer.update_scene(mjdata, camera="front_camera")
             rgb_array = renderer.render()
             bgr_array = cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR)
-            
+
             if train_mode:
                 controller.update(model, mjdata)
             else:
@@ -235,11 +235,11 @@ try:
                         action_history = np.concatenate([action_history, np.array(action_history_buffer)])
                 else:
                     action_history = np.array(action_history_buffer)
-                
+
                 controller.update(model, mjdata, rgb_array, action_history)
 
                 executed_action = ActionResNet.bin_action(controller.get_normalized_speeds())
-                
+
                 action_history_buffer.append(executed_action)
                 if len(action_history_buffer) > ACTION_HISTORY_SIZE:
                     action_history_buffer.pop(0)
@@ -247,7 +247,7 @@ try:
             set_camera_frame(bgr_array)
 
             if mjdata.time - last_data_time >= data_sample_interval:
-                episode_data["images"].append(bgr_array)
+                episode_data["images"].append(rgb_array)
                 episode_data["actions"].append(controller.get_normalized_speeds())
                 last_data_time = mjdata.time
             last_capture_time = mjdata.time

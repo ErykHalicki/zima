@@ -15,11 +15,12 @@ class ActionResNet(nn.Module):
             # helps gradient flow if centered around 0
         ])
 
-    def __init__(self, action_chunk_size=1, action_history_size=0, action_size=2):
+    def __init__(self, action_chunk_size=1, action_history_size=0, action_size=2, image_history_size=0):
         '''
         action_chunk_size: number of actions to predict at each inference
         action_history_size: number of actions to use for context as input
         action_size: size of each action (eg. 2 for 2 wheels)
+        image_history_size: number of historical images to use as input (not including current image)
         '''
         super().__init__()
         resnet = torchvision.models.resnet18(weights='DEFAULT')
@@ -28,8 +29,11 @@ class ActionResNet(nn.Module):
 
         self.feature_extractor = nn.Sequential(*list(resnet.children())[:-1])
 
+        num_images = image_history_size + 1
+        feature_dim = 512 * num_images + action_history_size * action_size
+
         self.action_head = nn.Sequential(
-            nn.Linear(512+action_history_size*action_size, 512),  # ResNet18 outputs 512 features + we input the action hitosry
+            nn.Linear(feature_dim, 512),
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(512,256),
@@ -38,19 +42,21 @@ class ActionResNet(nn.Module):
             nn.Linear(256,128),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(128, action_size*action_chunk_size) 
-            # Output: [B, action_chunk_size * action_size]
-            #output later gets transformed into [B, action_chunk_size, action_size]
+            nn.Linear(128, action_size*action_chunk_size)
         )
 
         self.action_chunk_size = action_chunk_size
         self.action_size = action_size
+        self.image_history_size = image_history_size
 
     def forward(self, x, action_history):
-        #need to transform image to 3x224x224
-        resnet_features = torch.flatten(self.feature_extractor(x), start_dim=1)
-        flattened_action_history = torch.flatten(action_history, start_dim=1) 
-        #use start_dim=1 to avoid flattening the entire batch
+        batch_size, num_images, C, H, W = x.shape
+
+        x_flat = x.view(batch_size * num_images, C, H, W)
+        resnet_features = self.feature_extractor(x_flat)
+        resnet_features = resnet_features.view(batch_size, num_images * 512)
+
+        flattened_action_history = torch.flatten(action_history, start_dim=1)
         features = torch.cat((resnet_features, flattened_action_history), dim=1)
         action_chunk = self.action_head(features).view(-1, self.action_chunk_size, self.action_size)
         return action_chunk

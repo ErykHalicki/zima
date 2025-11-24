@@ -17,9 +17,7 @@ from datetime import datetime
 import os
 
 def sample_transform(sample):
-    rgb_images = [cv2.cvtColor(img, cv2.COLOR_BGR2RGB) for img in sample["images"]]
-
-    transformed_images = [ActionResNet.convert_image_to_resnet(img) for img in rgb_images]
+    transformed_images = [ActionResNet.convert_image_to_resnet(img) for img in sample["images"]]
     sample["images"] = torch.stack(transformed_images)
 
     sample["action_history"] = np.array([ActionResNet.bin_action(action) for action in sample["action_history"]], dtype=np.float32)
@@ -62,7 +60,7 @@ RESUME_MODEL_PATH = None
 ACTION_CHUNK_SIZE = 10
 ACTION_HISTORY_SIZE = 20
 ACTION_SIZE = 4
-IMAGE_HISTORY_SIZE = 4
+IMAGE_HISTORY_SIZE = 3
 DATASET_PATH = "datasets/data/rubiks_cube_navigation_full_resized.hdf5"
 
 if RESUME_MODEL_PATH is not None:
@@ -86,24 +84,24 @@ print(f"Using dataset: {DATASET_PATH}")
 
 full_dataset = ZimaTorchDataset(file_path=DATASET_PATH,
                                 sample_transform=sample_transform,
-                                max_cached_episodes=250,
+                                max_cached_episodes=300,
                                 max_cached_images = 0,
                                 action_chunk_size = ACTION_CHUNK_SIZE,
                                 action_history_size = ACTION_HISTORY_SIZE,
                                 image_history_size = IMAGE_HISTORY_SIZE)
 
-train_size = int(0.9 * len(full_dataset))
-test_size = int(0.1 * len(full_dataset))
+train_size = int(0.8 * len(full_dataset))
+test_size = int(0.2 * len(full_dataset))
 null_set_size = len(full_dataset) - test_size - train_size
 
 train_dataset, test_dataset, null_set = random_split(
-    full_dataset, 
+    full_dataset,
     [train_size, test_size, null_set_size],
     generator=torch.Generator().manual_seed(514)
 )
 
-train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, pin_memory = True)
-test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=True, pin_memory = True)
+train_dataloader = DataLoader(train_dataset, batch_size=50, shuffle=True, pin_memory = True, num_workers=0)
+test_dataloader = DataLoader(test_dataset, batch_size=50, shuffle=True, pin_memory = True)
 
 all_actions = []
 for i in range(full_dataset.num_episodes):
@@ -194,7 +192,7 @@ print(f"  Training started: {model_metadata['training_date']}")
 
 for epoch in range(num_epochs):
     batch_start = time.time()
-    pbar = tqdm(train_dataloader, desc=f"Epoch {epoch+1}/{num_epochs}")
+    pbar = tqdm(train_dataloader, desc=f"Epoch {epoch+1}/{num_epochs}", mininterval=0.5)
 
     model.train()
     training_epoch_loss = []
@@ -205,17 +203,11 @@ for epoch in range(num_epochs):
         action_histories = batch["action_history"].to(device)
         action_chunks = batch["action_chunk"].to(device)
 
-        #action_variance = torch.var(action_chunks).cpu()
-        #ground_truth_variances.append(action_variance)
-
         data_time = time.time()
         
         optimizer.zero_grad()
         predictions = model(images, action_histories)
 
-        #prediction_variance = torch.var(predictions.detach()).cpu()
-        #prediction_variances.append(prediction_variance)
-        
         logits_flat = predictions.view(-1, ACTION_SIZE)
         targets_flat = action_chunks.view(-1)
         loss = loss_criterion(logits_flat, targets_flat)
@@ -223,24 +215,26 @@ for epoch in range(num_epochs):
         optimizer.step()
         train_time = time.time()
 
-        # Track predictions and targets for accuracy calculation
         predicted_classes = torch.argmax(logits_flat, dim=1)
-        train_all_predictions.append(predicted_classes.cpu())
-        train_all_targets.append(targets_flat.cpu())
+        train_all_predictions.append(predicted_classes)
+        train_all_targets.append(targets_flat)
 
-        batch_losses.append(loss.item())
-        training_epoch_loss.append(loss.item())
-        
-        postfix_dict = {"loss": f'{np.mean(training_epoch_loss):.4f}', 
-                        "data_time": f"{(data_time-batch_start):.2f}", 
-                        "train_time": f"{(train_time-data_time):.2f}"}
+        training_epoch_loss.append(loss.detach())
+
+        overhead_start = time.time()
+        postfix_dict = {"data_time": f"{(data_time-batch_start):.2f}",
+                        "train_time": f"{(train_time-data_time):.2f}",
+                        "overhead": f"{(overhead_start-train_time):.2f}"}
         pbar.set_postfix(postfix_dict)
         batch_start = time.time()
 
-    train_all_predictions = torch.cat(train_all_predictions)
-    train_all_targets = torch.cat(train_all_targets)
+    train_all_predictions = torch.cat(train_all_predictions).cpu()
+    train_all_targets = torch.cat(train_all_targets).cpu()
+    training_epoch_loss_cpu = [l.item() for l in training_epoch_loss]
+    batch_losses.extend(training_epoch_loss_cpu)
 
     print(f"\nEpoch {epoch+1}/{num_epochs} - Training Metrics:")
+    print(f"  Average Training Loss: {np.mean(training_epoch_loss_cpu):.4f}")
     print(f"  Overall TRAIN Accuracy: {(train_all_predictions == train_all_targets).float().mean():.4f}")
     print("  Per-class Accuracy:")
     for class_idx, class_name in enumerate(CLASS_NAMES):
@@ -268,19 +262,17 @@ for epoch in range(num_epochs):
             targets_flat = action_chunks.view(-1)
             loss = loss_criterion(logits_flat, targets_flat)
 
-            # Track predictions and targets for accuracy calculation
             predicted_classes = torch.argmax(logits_flat, dim=1)
-            test_all_predictions.append(predicted_classes.cpu())
-            test_all_targets.append(targets_flat.cpu())
+            test_all_predictions.append(predicted_classes)
+            test_all_targets.append(targets_flat)
 
         test_loss = loss.item()
         batch_test_losses.append(test_loss)
         epoch_test_losses.append(test_loss)
         test_pbar.set_postfix({"loss": f"{np.mean(batch_test_losses):.4f}"})
 
-    # Calculate and print test per-class accuracy
-    test_all_predictions = torch.cat(test_all_predictions)
-    test_all_targets = torch.cat(test_all_targets)
+    test_all_predictions = torch.cat(test_all_predictions).cpu()
+    test_all_targets = torch.cat(test_all_targets).cpu()
 
     avg_test_loss = np.mean(batch_test_losses)
     print(f"\nEpoch {epoch+1}/{num_epochs} - Test Metrics:")

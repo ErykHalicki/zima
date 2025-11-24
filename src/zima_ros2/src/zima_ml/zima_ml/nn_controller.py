@@ -12,8 +12,10 @@ class NNController(ControllerBase):
         self.processing_image = False
 
         self.declare_parameter('model_path', '')
+        self.declare_parameter('action_chunk_usage_ratio', 0.0)
 
         model_path = self.get_parameter('model_path').get_parameter_value().string_value
+        self.action_chunk_usage_ratio = self.get_parameter('action_chunk_usage_ratio').get_parameter_value().double_value
 
         if not model_path:
             self.get_logger().error('model_path parameter is required but not set')
@@ -46,6 +48,7 @@ class NNController(ControllerBase):
         self.get_logger().info(f"Action History Size: {self.action_history_size}")
         self.get_logger().info(f"Action Size: {self.action_size}")
         self.get_logger().info(f"Image History Size: {self.image_history_size}")
+        self.get_logger().info(f"Action Chunk Usage Ratio: {self.action_chunk_usage_ratio}")
         if 'epoch' in checkpoint:
             self.get_logger().info(f"Epoch: {checkpoint['epoch']}")
         if 'best_test_loss' in checkpoint:
@@ -59,6 +62,8 @@ class NNController(ControllerBase):
         self.model.eval()
 
         self.image_history_buffer = []
+        self.action_chunk_buffer = None
+        self.action_chunk_index = 0
 
     def camera_callback(self, msg):
         if self.processing_image:
@@ -85,28 +90,35 @@ class NNController(ControllerBase):
         if len(self.image_history_buffer) > self.image_history_size + 1:
             self.image_history_buffer.pop(0)
 
-        if len(self.image_history_buffer) < self.image_history_size + 1:
-            padding_needed = self.image_history_size + 1 - len(self.image_history_buffer)
-            first_image = self.image_history_buffer[0]
-            image_stack = [first_image] * padding_needed + self.image_history_buffer
-        else:
-            image_stack = self.image_history_buffer
+        chunk_usage_steps = max(1, int(self.action_chunk_size * self.action_chunk_usage_ratio))
 
-        transformed_images = [ActionResNet.convert_image_to_resnet(img).to(self.device) for img in image_stack]
-        input_batch = torch.stack(transformed_images).unsqueeze(0)
+        if self.action_chunk_buffer is None or self.action_chunk_index >= chunk_usage_steps:
+            if len(self.image_history_buffer) < self.image_history_size + 1:
+                padding_needed = self.image_history_size + 1 - len(self.image_history_buffer)
+                first_image = self.image_history_buffer[0]
+                image_stack = [first_image] * padding_needed + self.image_history_buffer
+            else:
+                image_stack = self.image_history_buffer
 
-        action_history_tensor = torch.tensor(action_history, dtype=torch.float32).unsqueeze(0).to(self.device)
-        action_chunk = self.model(input_batch, action_history_tensor)
-        sm = torch.nn.Softmax(dim=2)
-        action_probs = sm(action_chunk)
-        #print(f"Action chunk probabilities:\n {torch.round(action_probs, decimals=2)}")
+            transformed_images = [ActionResNet.convert_image_to_resnet(img).to(self.device) for img in image_stack]
+            input_batch = torch.stack(transformed_images).unsqueeze(0)
 
-        # Sample action from softmax distribution instead of taking argmax
-        next_action = torch.multinomial(action_probs[0][0], num_samples=1).item()
-        action_prob = action_probs[0][0][next_action].item()
+            action_history_tensor = torch.tensor(action_history, dtype=torch.float32).unsqueeze(0).to(self.device)
+            action_chunk = self.model(input_batch, action_history_tensor)
+            sm = torch.nn.Softmax(dim=2)
+            action_probs = sm(action_chunk)
+
+            self.action_chunk_buffer = action_probs[0]
+            self.action_chunk_index = 0
+
+        next_action = torch.multinomial(self.action_chunk_buffer[self.action_chunk_index], num_samples=1).item()
+        action_prob = self.action_chunk_buffer[self.action_chunk_index][next_action].item()
+
         if len(self.action_history_buffer) > 0:
             if next_action != np.argmax(self.action_history_buffer[-1]):
-                self.get_logger().info(f"Executing action: {next_action} with probability: {action_prob:.3f}")
+                self.get_logger().info(f"Executing action: {next_action} (chunk step {self.action_chunk_index}/{chunk_usage_steps}) with probability: {action_prob:.3f}")
+        else:
+            self.get_logger().info(f"Executing action: {next_action} (chunk step {self.action_chunk_index}/{chunk_usage_steps}) with probability: {action_prob:.3f}")
 
         if next_action == 0:
             self.stop()
@@ -123,6 +135,8 @@ class NNController(ControllerBase):
         self.action_history_buffer.append(executed_action)
         if len(self.action_history_buffer) > self.action_history_size:
             self.action_history_buffer.pop(0)
+
+        self.action_chunk_index += 1
 
 def main(args=None):
     rclpy.init(args=args)
