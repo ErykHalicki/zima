@@ -9,4 +9,4 @@ x = torch.randn(batch_size,seq_len,d_model)
 a_head = AttentionHead(d_model, d_keys)
 mask = torch.ones(batch_size, seq_len, seq_len).tril()
 
-print(a_head(x, mask))
+print(a_head(x, mask).shape)

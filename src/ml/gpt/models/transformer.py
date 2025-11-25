@@ -33,8 +33,8 @@ class AttentionHead(nn.Module):
         '''
         K_t = K.transpose(1,2) # (batch, d_seq, d_keys) -> (batch, d_keys, d_seq)
         scaled_attention_matrix = Q@K_t/self.root_d_keys # (d_seq, d_keys) x (d_keys, d_seq) -> (d_seq, d_seq)
-        if not mask is None:
-            scaled_attention_matrix.masked_fill_(mask == 0, float('-inf'))
+        if mask is not None:
+            scaled_attention_matrix = scaled_attention_matrix.masked_fill(mask == 0, float('-inf'))
         # attention matrix[i,j] says, "how much does token i care about token j"
         normalized_attention_matrix = self.softmax(scaled_attention_matrix) 
         # every row now represents a weight vector for each token in the sequence, between 0-1, summing to 1.  
