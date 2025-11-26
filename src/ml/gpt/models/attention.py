@@ -39,5 +39,34 @@ class AttentionHead(nn.Module):
         normalized_attention_matrix = self.softmax(scaled_attention_matrix) 
         # every row now represents a weight vector for each token in the sequence, between 0-1, summing to 1.  
         return normalized_attention_matrix @ V # (d_seq, d_seq) x (d_seq, d_keys) -> (d_seq, d_keys)
-        # every row still corresponds to one token, but now the token has been enriched with meaning from the other tokens in the sequence that matter to it    
+        # every row still corresponds to one token, but now the token has been 
+        # enriched with meaning from the other tokens in the sequence that matter to it    
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, num_heads, d_model):
+        super().__init__()
+        if d_model%num_heads != 0:
+            raise Exception(f"d_model must be divisible by num_heads.\td_m: {d_model}\tn_heads:{num_heads}")
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.heads = nn.ModuleList([
+            AttentionHead(d_model, d_model // num_heads) 
+            for _ in range(num_heads)
+        ])
+
+        self.output_projection = nn.Linear(d_model, d_model)
+    
+    def forward(self, x, mask=None):
+        '''
+        x: batch of stacked sequence row vectors (batch, d_seq, d_model)
+        mask (Optional): if provided, will mask the attention matrix (batch, d_seq, d_seq) 1 to keep, 0 to mask 
+        '''
+        attention_head_outputs = [head(x, mask) for head in self.heads]
+        concatenated_head_output = torch.cat(attention_head_outputs, dim=2) 
+        # dim 2 = d_model dimension, so we are turning num_heads vectors of size d_keys and turning them back into a vector of d_model
+        return self.output_projection(concatenated_head_output)
+
+
+
+
 
