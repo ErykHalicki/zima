@@ -9,6 +9,7 @@ EXPANSION_MULTIPLIER = 4 # used by transformer feedforward block
 
 class TransformerBlock(nn.Module):
     def __init__(self, num_heads, d_model):
+        super().__init__()
         self.layer_norm = nn.LayerNorm(d_model)
         self.multi_head_attention = MultiHeadAttention(num_heads, d_model)
         self.dropout = nn.Dropout(p=DROPOUT_RATE)
@@ -16,13 +17,17 @@ class TransformerBlock(nn.Module):
                                          nn.GELU(approximate='tanh'),
                                          nn.Linear(d_model*EXPANSION_MULTIPLIER, d_model))
 
-    def forward(self, x, mask=None):
+    def forward(self, batch_and_mask):
+        '''
+        batch_and_mask: tuple of (batch, mask)
+        '''
+        x, mask = batch_and_mask
         normalized_x = self.layer_norm(x)
         enriched_x = self.dropout(self.multi_head_attention(normalized_x, mask))
         residual_x = torch.add(enriched_x, x) # residual connection 1
         normalized_residual_x = self.layer_norm(residual_x)
         ffn_output = self.dropout(self.feedforward(normalized_residual_x))
-        return torch.add(ffn_output, normalized_residual_x) # residual connection 2
+        return torch.add(ffn_output, normalized_residual_x), mask # residual connection 2
 
 class GPT(nn.Module):
     def __init__(self, N, num_heads, d_model, vocabulary_size):
@@ -39,27 +44,44 @@ class GPT(nn.Module):
         
         self.token_embedding = nn.Embedding(self.vocabulary_size, self.d_model)
         self.dropout = nn.Dropout(p=DROPOUT_RATE)
+        self.transformer_blocks = nn.Sequential()
+        for _ in range(N):
+            self.transformer_blocks.append(TransformerBlock(num_heads, self.d_model))
+        self.output_projection = nn.Linear(d_model, vocabulary_size) # (batch, d_seq, d_model) -> (batch, d_seq, d_vocab)
+        self.softmax = nn.Softmax(dim=2) # when dim = 2, we are iterating across dim 2, so we are iterating across d_vocab such that the probabilities of all possible tokens sum to 1
 
     def forward(self, x, mask=None):
         '''
         x: batch of token sequences (batch, d_seq) (index not one-hot)
         mask (Optional): if provided, will mask the attention matrices in multi head attention (batch, d_seq, d_seq) 1 to keep, 0 to mask
+        returns logits, not probabilities
         '''
         token_embeddings = self.token_embedding(x) # turns x from (batch, d_seq) to (batch, d_seq, d_model)
         full_embeddings = torch.add(token_embeddings, self.positional_encodings[:x.shape[1]])
+        transformer_block_chain_output, _ = self.transformer_blocks((full_embeddings, mask))
+        return self.output_projection(transformer_block_chain_output)
+
+    def inference(self, x, mask=None, temperature=1.0):
+        '''
+        x: batch of token sequences (batch, d_seq) (index not one-hot)
+        mask (Optional): if provided, will mask the attention matrices in multi head attention (batch, d_seq, d_seq) 1 to keep, 0 to mask
+        temperature (default=1.0): higher temperature results in more even probability distribution / reduced model output confidence
+        returns vocabulary index of predicted token
+        '''
+        logits = self.forward(x,mask)/temperature
+        probabilities = self.softmax(logits)
+        #print(probabilities)
+        return torch.multinomial(probabilities[-1][-1], 1)
 
 
     def generate_positional_encoding(self, max_seq_len):
         #pre-generate (max_seq_len, d_model) positional encodings
         position_vector = torch.reshape(torch.linspace(0, max_seq_len-1, max_seq_len), (max_seq_len, 1))
-        print(position_vector)
         position_matrix = torch.broadcast_to(position_vector, (max_seq_len, self.d_model)) #pos within a row is the same, since a row is a single token embedding / data point
         dimension_vector = torch.floor_divide(torch.linspace(0, self.d_model-1, self.d_model), 2)*2 # 0,2,4,...,d_model-2
         dimension_vector = torch.div(dimension_vector, self.d_model)# now its float from 0-1
-        print(dimension_vector)
         dimension_matrix = torch.broadcast_to(dimension_vector, (max_seq_len, self.d_model)) # all entries in a column are the same
         dimension_matrix = torch.pow(torch.ones(max_seq_len, self.d_model)*max_seq_len, dimension_matrix) # max_seq_len**(2i/d_model)
-        print(dimension_matrix)
         positional_encodings = torch.empty(max_seq_len, self.d_model)
         positional_encodings[:, ::2] = torch.sin(torch.div(position_matrix, dimension_matrix)[:,::2])
         positional_encodings[:, 1::2] = torch.cos(torch.div(position_matrix, dimension_matrix)[:,1::2])
