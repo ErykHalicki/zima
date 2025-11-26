@@ -5,15 +5,14 @@ sample_corpus = """Generative Pre-trained Transformer 1 (GPT-1) was the first of
 
 tokenizer = Tokenizer()
 tokenizer.calculate_vocabulary_from_text(sample_corpus)
-print(tokenizer.inverse_vocabulary)
+#print(tokenizer.inverse_vocabulary)
 
-gpt = GPT(6,8,512, tokenizer.vocabulary_length()).to("cuda")
-gpt.positional_encodings = gpt.positional_encodings.to("cuda")
+gpt = GPT(1,8,512, tokenizer.vocabulary_length())
 
 for i in range(100):
-    batch = tokenizer.tokenize(sample_corpus).unsqueeze(0).to("cuda")
-    index = gpt.inference(batch)
-    output = tokenizer.inverse_vocabulary[index.cpu().item()]
+    text = tokenizer.tokenize(sample_corpus)
+    index = gpt.inference(text)
+    output = tokenizer.inverse_vocabulary[index]
     sample_corpus+=str(output)
 
 print(sample_corpus)

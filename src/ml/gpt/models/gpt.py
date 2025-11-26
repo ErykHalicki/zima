@@ -40,15 +40,18 @@ class GPT(nn.Module):
         super().__init__()
         self.vocabulary_size = vocabulary_size
         self.d_model = d_model
-        self.positional_encodings = self.generate_positional_encoding(MAX_SEQUENCE_LENGTH)
+        self.positional_encodings = nn.Parameter(self.generate_positional_encoding(MAX_SEQUENCE_LENGTH), requires_grad=False) 
+        # (max_seq_lenth, d_model), needs to be reduced to (d_seq, d_model) during forward pass
         
-        self.token_embedding = nn.Embedding(self.vocabulary_size, self.d_model)
+        self.token_embedding_matrix = torch.empty(self.vocabulary_size, self.d_model)
+        self.token_embedding_matrix = nn.init.xavier_uniform_(self.token_embedding_matrix, gain=nn.init.calculate_gain("relu"))
+        self.token_embedding_matrix = nn.Parameter(self.token_embedding_matrix, requires_grad=True) # (batch, d_seq, d_vocab) -> (batch, d_seq, d_model)
         self.dropout = nn.Dropout(p=DROPOUT_RATE)
         self.transformer_blocks = nn.Sequential()
         for _ in range(N):
             self.transformer_blocks.append(TransformerBlock(num_heads, self.d_model))
-        self.output_projection = nn.Linear(d_model, vocabulary_size) # (batch, d_seq, d_model) -> (batch, d_seq, d_vocab)
-        self.softmax = nn.Softmax(dim=2) # when dim = 2, we are iterating across dim 2, so we are iterating across d_vocab such that the probabilities of all possible tokens sum to 1
+        self.output_projection = nn.Linear(d_model, vocabulary_size) 
+        self.softmax = nn.Softmax(dim=0) #used with sequence already reduced to 1D Tensor (d_vocab)
 
     def forward(self, x, mask=None):
         '''
@@ -56,23 +59,35 @@ class GPT(nn.Module):
         mask (Optional): if provided, will mask the attention matrices in multi head attention (batch, d_seq, d_seq) 1 to keep, 0 to mask
         returns logits, not probabilities
         '''
-        token_embeddings = self.token_embedding(x) # turns x from (batch, d_seq) to (batch, d_seq, d_model)
-        full_embeddings = torch.add(token_embeddings, self.positional_encodings[:x.shape[1]])
-        transformer_block_chain_output, _ = self.transformer_blocks((full_embeddings, mask))
-        return self.output_projection(transformer_block_chain_output)
+        x = nn.functional.one_hot(x, num_classes=self.vocabulary_size).float() #(batch, d_seq) -> (batch, d_seq, d_vocab)
+        token_embeddings = x@self.token_embedding_matrix # turns x from (batch, d_seq, d_vocab) to (batch, d_seq, d_model)
+        reduced_positional_encodings = self.positional_encodings[:x.shape[1]] # reduces positional encoding matrix to (d_seq, d_model)
+        full_embeddings = torch.add(token_embeddings, reduced_positional_encodings)
+        full_embeddings = self.dropout(full_embeddings)
+        transformer_block_chain_output, _ = self.transformer_blocks((full_embeddings, mask)) #(batch, d_seq, d_model)
+        return transformer_block_chain_output@torch.transpose(self.token_embedding_matrix, 0,1) 
+        # (batch, d_seq, d_model) -> (batch, d_seq, d_vocab) 
+        # returns dot product of the output of the transformer block with each tokens embedded vector
+        # essentially returning, "how similar is my output to each token in my vocabulary"
+        # and then we softmax such that the most similar token embedding has the highest probability of being chosen
 
-    def inference(self, x, mask=None, temperature=1.0):
+    def inference(self, x, temperature=1.0):
         '''
-        x: batch of token sequences (batch, d_seq) (index not one-hot)
-        mask (Optional): if provided, will mask the attention matrices in multi head attention (batch, d_seq, d_seq) 1 to keep, 0 to mask
+        x: token sequence (d_seq) (index not one-hot)
         temperature (default=1.0): higher temperature results in more even probability distribution / reduced model output confidence
         returns vocabulary index of predicted token
         '''
-        logits = self.forward(x,mask)/temperature
-        probabilities = self.softmax(logits)
-        #print(probabilities)
-        return torch.multinomial(probabilities[-1][-1], 1)
-
+        if not isinstance(x, torch.Tensor):
+            x = torch.tensor(x)
+        if len(x.shape) != 1:
+            raise Exception("Inference function is only meant for a single input sequence!")
+        x = torch.unsqueeze(x, dim=0)
+        mask = torch.unsqueeze(torch.tril(torch.ones(x.shape[0],x.shape[0])), dim=0) # (batch, d_seq, d_seq)
+        logits = torch.squeeze(self.forward(x,mask))[-1]/temperature
+        # remove all dimensions and entries other than the one corresponding to the last token (d_vocab)
+        probabilities = self.softmax(logits) # (d_vocab) but summing to 1
+        return torch.multinomial(probabilities, 1).cpu().item() 
+        # sample the next token probabilities corresponding the last token in the sequence
 
     def generate_positional_encoding(self, max_seq_len):
         #pre-generate (max_seq_len, d_model) positional encodings
