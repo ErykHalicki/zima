@@ -1,6 +1,8 @@
 import json
 from torch import tensor
 
+UNKOWN_STRING = "{UNK}"
+
 class Tokenizer:
     def __init__(self):
         self.vocabulary = {} # {token: index}
@@ -14,8 +16,8 @@ class Tokenizer:
         for index, key in enumerate(vocabulary_list):
             self.vocabulary[key] = index
             self.inverse_vocabulary[index] = key
-        self.vocabulary["unknown"] = len(self.vocabulary)
-        self.inverse_vocabulary[len(self.vocabulary)-1] = "unknown"
+        self.vocabulary[UNKOWN_STRING] = len(self.vocabulary)
+        self.inverse_vocabulary[len(self.vocabulary)-1] = UNKOWN_STRING
     
     def vocabulary_length(self):
         return len(self.vocabulary)
@@ -31,12 +33,15 @@ class Tokenizer:
             if char in self.vocabulary:
                 result.append(self.vocabulary[char])
             else:
-                result.append(self.vocabulary["unknown"])
+                result.append(self.vocabulary[UNKOWN_STRING])
         return tensor(result)
 
     def load_vocabulary_from_json(self, file_path):
         with open(file_path, "rt") as f:
             self.vocabulary = json.load(f)
+        for key in self.vocabulary:
+            value = self.vocabulary[key]
+            self.inverse_vocabulary[value] = key
 
     def save_vocabulary_to_json(self, file_path):
         with open(file_path, "wt") as f:

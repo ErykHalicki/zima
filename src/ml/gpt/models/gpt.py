@@ -30,7 +30,7 @@ class TransformerBlock(nn.Module):
         return torch.add(ffn_output, normalized_residual_x), mask # residual connection 2
 
 class GPT(nn.Module):
-    def __init__(self, N, num_heads, d_model, vocabulary_size):
+    def __init__(self, N, num_heads, d_model, vocabulary_size, device='cpu'):
         '''
         N: Number of sequential transformer blocks to use
         num_heads: number of attention heads to use within each multi head attention block
@@ -38,8 +38,11 @@ class GPT(nn.Module):
         vocabulary_size: max index expected by model + 1
         '''
         super().__init__()
+        if vocabulary_size <= 0:
+            raise Exception("vocabulary_size must be greater than 0")
         self.vocabulary_size = vocabulary_size
         self.d_model = d_model
+        self.device=device
         self.positional_encodings = nn.Parameter(self.generate_positional_encoding(MAX_SEQUENCE_LENGTH), requires_grad=False) 
         # (max_seq_lenth, d_model), needs to be reduced to (d_seq, d_model) during forward pass
         
@@ -52,6 +55,7 @@ class GPT(nn.Module):
             self.transformer_blocks.append(TransformerBlock(num_heads, self.d_model))
         self.output_projection = nn.Linear(d_model, vocabulary_size) 
         self.softmax = nn.Softmax(dim=0) #used with sequence already reduced to 1D Tensor (d_vocab)
+        self.to(self.device)
 
     def forward(self, x, mask=None):
         '''
@@ -82,7 +86,7 @@ class GPT(nn.Module):
         if len(x.shape) != 1:
             raise Exception("Inference function is only meant for a single input sequence!")
         x = torch.unsqueeze(x, dim=0)
-        mask = torch.unsqueeze(torch.tril(torch.ones(x.shape[0],x.shape[0])), dim=0) # (batch, d_seq, d_seq)
+        mask = torch.unsqueeze(torch.tril(torch.ones(x.shape[0],x.shape[0])), dim=0).to(self.device) # (batch, d_seq, d_seq)
         logits = torch.squeeze(self.forward(x,mask))[-1]/temperature
         # remove all dimensions and entries other than the one corresponding to the last token (d_vocab)
         probabilities = self.softmax(logits) # (d_vocab) but summing to 1
@@ -101,4 +105,7 @@ class GPT(nn.Module):
         positional_encodings[:, ::2] = torch.sin(torch.div(position_matrix, dimension_matrix)[:,::2])
         positional_encodings[:, 1::2] = torch.cos(torch.div(position_matrix, dimension_matrix)[:,1::2])
         return positional_encodings
+
+    def count_parameters(model): 
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
