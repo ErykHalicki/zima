@@ -9,16 +9,16 @@ from tqdm import tqdm
 import os
 
 
-DATASET_PATH = "~/datasets/data/wikipedia_GPT-1.hdf5"
+DATASET_PATH = "~/datasets/data/wikipedia_Monkey.hdf5"
 MODEL_PATH = "models/weights/"
 LOAD_MODEL = None
-CHUNK_SIZE = 512
-EPOCHS = 10
-NUM_LAYERS = 4
+CHUNK_SIZE = 256
+EPOCHS = 30
+NUM_LAYERS = 12
 NUM_HEADS = 8
 D_MODEL = 512
 LEARNING_RATE = 2.5e-4
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 
 device = torch.device("cpu")
 if torch.backends.mps.is_available():
@@ -39,7 +39,7 @@ if LOAD_MODEL:
 
 print(f"Parameters: {model.count_parameters()/1000000.0:.2f} M")
 
-train_size = int(0.9 * len(full_dataset))
+train_size = int(0.999 * len(full_dataset))
 test_size = len(full_dataset) - train_size
 
 train_dataset, test_dataset = random_split(
