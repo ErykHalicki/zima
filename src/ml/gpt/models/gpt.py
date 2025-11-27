@@ -3,9 +3,8 @@ from torch import nn
 from .attention import MultiHeadAttention
 
 MAX_SEQUENCE_LENGTH = 10000
-DROPOUT_RATE = 0.3
+DROPOUT_RATE = 0.1
 EXPANSION_MULTIPLIER = 4 # used by transformer feedforward block
-# https://medium.com/@hunter-j-phillips/position-wise-feed-forward-network-ffn-d4cc9e997b4c
 
 class TransformerBlock(nn.Module):
     def __init__(self, num_heads, d_model):

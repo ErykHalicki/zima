@@ -1,18 +1,19 @@
 from math import inf
-from node import node
+from .node import node
 from collections import deque
 import concurrent.futures
 import sys
 from tqdm import tqdm
-import h5py
 
 prefix = 'https://en.wikipedia.org/wiki/'
 max_workers = 10
 
-def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar = True, save_to_hdf5=False):
+def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar = True):
     '''
     start_link: string corresponding to wikipedia page title (not including wikipedia link)
     ex. start_link = "GPT-1" corresponds to the page https://en.wikipedia.org/wiki/GPT-1
+
+    Returns: a dictionary of node objects {node.link: node}. Access text using node.text
 
     Algorithm:
         Start at start_link, and explore every link on the page
