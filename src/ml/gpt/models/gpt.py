@@ -81,8 +81,8 @@ class GPT(nn.Module):
             x = torch.tensor(x)
         if len(x.shape) != 1:
             raise Exception("Inference function is only meant for a single input sequence!")
-        x = torch.unsqueeze(x, dim=0)
-        mask = torch.unsqueeze(torch.tril(torch.ones(x.shape[0],x.shape[0])), dim=0).to(self.device) # (batch, d_seq, d_seq)
+        mask = torch.unsqueeze(torch.tril(torch.ones(x.shape[0],x.shape[0])), dim=0).to(self.device) # (1, d_seq, d_seq)
+        x = torch.unsqueeze(x, 0) # (1, d_seq)
         logits = torch.squeeze(self.forward(x,mask))[-1]/temperature
         # remove all dimensions and entries other than the one corresponding to the last token (d_vocab)
         probabilities = self.softmax(logits) # (d_vocab) but summing to 1

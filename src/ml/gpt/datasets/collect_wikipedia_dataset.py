@@ -8,8 +8,8 @@ import numpy as np
 # Arguments
 # -------------
 
-TOPIC = "Monkey"
-PAGE_COUNT = 1000
+TOPIC = "GPT-1"
+PAGE_COUNT = 1
 VOCABULARY_MAX_CORPUS_LENGTH = 100000000
 DATASET_PATH = f"~/datasets/data/wikipedia_{TOPIC}.hdf5"
 

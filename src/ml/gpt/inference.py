@@ -2,9 +2,10 @@ from models.gpt import GPT
 from datasets.tokenizer import Tokenizer
 import torch
 
-MODEL_PATH = "models/weights/model_epoch_1.pt"
+TOPIC = "GPT-1"
+MODEL_PATH = f"models/weights/{TOPIC}_GPT.pt"
 
-input = """Hello my name is """
+input = """released a paper entitled "Improving La"""
 
 device = torch.device("cpu")
 if torch.backends.mps.is_available():
@@ -31,10 +32,14 @@ gpt.eval()
 
 print(f"Loaded model from {MODEL_PATH}")
 print(f"Parameters: {gpt.count_parameters()/1000000.0:.2f} M")
+print(input, end='',flush=True)
+text = torch.from_numpy(tokenizer.tokenize(input))[:-1].to(device)
 
-for i in range(10):
-    text = torch.from_numpy(tokenizer.tokenize(input)).to(device)
-    index = gpt.inference(text)
-    input+=str(tokenizer.inverse_vocabulary[index])
+for i in range(100):
+    context = text[-128:] if len(text) > 128 else text
+    index = gpt.inference(context, temperature=0.01)
+    token_output = str(tokenizer.inverse_vocabulary[index])
+    text = torch.cat([text, torch.tensor([index]).to(device)])
+    print(token_output,end='',flush=True)
 
-print(input)
+print("\n")

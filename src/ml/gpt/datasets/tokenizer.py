@@ -1,11 +1,11 @@
 import numpy as np
 
-UNKOWN_STRING = "{UNK}"
-UNKOWN_TOKEN = 2
-END_STRING = "{END}"
-END_TOKEN = 1
-PAD_STRING = "{PAD}"
-PAD_TOKEN = 0
+UNKOWN_TOKEN= "{UNK}"
+UNKOWN_TOKEN_ID = 2
+END_TOKEN = "{END}"
+END_TOKEN_ID = 1
+PAD_TOKEN = "{PAD}"
+PAD_TOKEN_ID = 0
 
 class Tokenizer:
     def __init__(self):
@@ -18,12 +18,12 @@ class Tokenizer:
         vocabulary_list = list(vocabulary_set)
         vocabulary_list.sort(key=ord) # sort by unicode value to make more reproducible
         
-        self.vocabulary[PAD_STRING] = PAD_TOKEN
-        self.inverse_vocabulary[PAD_TOKEN] = PAD_STRING
-        self.vocabulary[UNKOWN_STRING] = UNKOWN_TOKEN
-        self.inverse_vocabulary[UNKOWN_TOKEN] = UNKOWN_STRING
-        self.vocabulary[END_STRING] = END_TOKEN
-        self.inverse_vocabulary[END_TOKEN] = END_STRING
+        self.vocabulary[PAD_TOKEN] = PAD_TOKEN_ID
+        self.inverse_vocabulary[PAD_TOKEN_ID] = PAD_TOKEN
+        self.vocabulary[UNKOWN_TOKEN] = UNKOWN_TOKEN_ID
+        self.inverse_vocabulary[UNKOWN_TOKEN_ID] = UNKOWN_TOKEN
+        self.vocabulary[END_TOKEN] = END_TOKEN_ID
+        self.inverse_vocabulary[END_TOKEN_ID] = END_TOKEN
 
         start_index = len(self.vocabulary)
         for index, key in enumerate(vocabulary_list):
@@ -44,8 +44,8 @@ class Tokenizer:
             if char in self.vocabulary:
                 result.append(self.vocabulary[char])
             else:
-                result.append(self.vocabulary[UNKOWN_STRING])
-        result.append(self.vocabulary[END_STRING])
+                result.append(self.vocabulary[UNKOWN_TOKEN])
+        result.append(self.vocabulary[END_TOKEN])
         return np.array(result)
 
     def untokenize(self, data):
@@ -59,7 +59,7 @@ class Tokenizer:
         return result
             
     def vocabulary_to_numpy(self):
-        return np.array([[ord(token), index] for token, index in self.vocabulary.items() if token not in [UNKOWN_STRING, END_STRING, PAD_STRING]])
+        return np.array([[ord(token), index] for token, index in self.vocabulary.items() if token not in [UNKOWN_TOKEN, END_TOKEN, PAD_TOKEN]])
     
     def vocabulary_from_numpy(self, vocab_array):
         self.vocabulary.clear()
@@ -69,9 +69,9 @@ class Tokenizer:
             index = int(row[1])
             self.vocabulary[token] = index
             self.inverse_vocabulary[index] = token
-        self.vocabulary[PAD_STRING] = PAD_TOKEN
-        self.inverse_vocabulary[PAD_TOKEN] = PAD_STRING
-        self.vocabulary[UNKOWN_STRING] = UNKOWN_TOKEN
-        self.inverse_vocabulary[UNKOWN_TOKEN] = UNKOWN_STRING
-        self.vocabulary[END_STRING] = END_TOKEN
-        self.inverse_vocabulary[END_TOKEN] = END_STRING
+        self.vocabulary[PAD_TOKEN] = PAD_TOKEN_ID
+        self.inverse_vocabulary[PAD_TOKEN_ID] = PAD_TOKEN
+        self.vocabulary[UNKOWN_TOKEN] = UNKOWN_TOKEN_ID
+        self.inverse_vocabulary[UNKOWN_TOKEN_ID] = UNKOWN_TOKEN
+        self.vocabulary[END_TOKEN] = END_TOKEN_ID
+        self.inverse_vocabulary[END_TOKEN_ID] = END_TOKEN

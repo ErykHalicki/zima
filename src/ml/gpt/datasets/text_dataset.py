@@ -1,7 +1,6 @@
 import h5py
 import numpy as np
 import os
-from .tokenizer import UNKOWN_STRING, END_STRING
 
 class TextDataset:
     def __init__(self, file_path):

@@ -1,6 +1,6 @@
 from .text_dataset import TextDataset
 from torch.utils.data import Dataset
-from .tokenizer import PAD_TOKEN
+from .tokenizer import PAD_TOKEN_ID, END_TOKEN_ID 
 import torch
 
 class TorchTextDataset(TextDataset, Dataset):
@@ -30,11 +30,15 @@ class TorchTextDataset(TextDataset, Dataset):
 
                 if len(chunk) < chunk_size:
                     padding_length = chunk_size - len(chunk)
-                    chunk = torch.cat([chunk, torch.full((padding_length,), PAD_TOKEN, dtype=torch.long)])
-                    mask[len(chunk) - padding_length:] = 0
+                    chunk = torch.cat([chunk, torch.full((padding_length,), PAD_TOKEN_ID, dtype=torch.long)])
+                    mask[chunk_size - padding_length:] = 0
 
                 self.chunks.append(chunk)
                 self.masks.append(mask)
+
+        total_tokens = sum(len(chunk) for chunk in self.chunks)
+        end_count = sum((chunk == END_TOKEN_ID).sum().item() for chunk in self.chunks)
+        print(f"{END_TOKEN_ID} tokens: {end_count}/{total_tokens} = {100*end_count/total_tokens:.1f}%")
 
     def __len__(self):
         return len(self.chunks)
