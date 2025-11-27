@@ -24,7 +24,7 @@ class TorchTextDataset(TextDataset, Dataset):
             for i in range(num_chunks):
                 start_idx = i * chunk_size
                 end_idx = min(start_idx + chunk_size, len(doc))
-                chunk = doc[start_idx:end_idx]
+                chunk = torch.tensor(doc[start_idx:end_idx])
 
                 mask = torch.ones(chunk_size, dtype=torch.long)
 
@@ -40,6 +40,6 @@ class TorchTextDataset(TextDataset, Dataset):
         return len(self.chunks)
 
     def __getitem__(self, idx):
-        return {'chunk': self.chunks[idx], 'mask': self.masks[idx]}
+        return {'chunks': self.chunks[idx].detach(), 'masks': self.masks[idx].detach()}
         #if token at index
         

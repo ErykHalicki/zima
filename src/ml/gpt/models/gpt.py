@@ -42,17 +42,15 @@ class GPT(nn.Module):
         self.vocabulary_size = vocabulary_size
         self.d_model = d_model
         self.device=device
-        self.positional_encodings = nn.Parameter(self.generate_positional_encoding(MAX_SEQUENCE_LENGTH), requires_grad=False) 
+        self.positional_encodings = nn.Parameter(self.generate_positional_encoding(MAX_SEQUENCE_LENGTH), requires_grad=False)
         # (max_seq_lenth, d_model), needs to be reduced to (d_seq, d_model) during forward pass
-        
-        self.token_embedding_matrix = torch.empty(self.vocabulary_size, self.d_model)
-        self.token_embedding_matrix = nn.init.xavier_uniform_(self.token_embedding_matrix, gain=nn.init.calculate_gain("relu"))
-        self.token_embedding_matrix = nn.Parameter(self.token_embedding_matrix, requires_grad=True) # (batch, d_seq, d_vocab) -> (batch, d_seq, d_model)
+
+        self.token_embedding = nn.Embedding(self.vocabulary_size, self.d_model)
+
         self.dropout = nn.Dropout(p=DROPOUT_RATE)
         self.transformer_blocks = nn.Sequential()
         for _ in range(N):
-            self.transformer_blocks.append(TransformerBlock(num_heads, self.d_model))
-        self.output_projection = nn.Linear(d_model, vocabulary_size) 
+            self.transformer_blocks.append(TransformerBlock(num_heads, self.d_model)) 
         self.softmax = nn.Softmax(dim=0) #used with sequence already reduced to 1D Tensor (d_vocab)
         self.to(self.device)
 
@@ -62,13 +60,12 @@ class GPT(nn.Module):
         mask (Optional): if provided, will mask the attention matrices in multi head attention (batch, d_seq, d_seq) 1 to keep, 0 to mask
         returns logits, not probabilities
         '''
-        x = nn.functional.one_hot(x, num_classes=self.vocabulary_size).float() #(batch, d_seq) -> (batch, d_seq, d_vocab)
-        token_embeddings = x@self.token_embedding_matrix # turns x from (batch, d_seq, d_vocab) to (batch, d_seq, d_model)
+        token_embeddings = self.token_embedding(x) # turns x from (batch, d_seq) to (batch, d_seq, d_model)
         reduced_positional_encodings = self.positional_encodings[:x.shape[1]] # reduces positional encoding matrix to (d_seq, d_model)
         full_embeddings = torch.add(token_embeddings, reduced_positional_encodings)
         full_embeddings = self.dropout(full_embeddings)
         transformer_block_chain_output, _ = self.transformer_blocks((full_embeddings, mask)) #(batch, d_seq, d_model)
-        return transformer_block_chain_output@torch.transpose(self.token_embedding_matrix, 0,1) 
+        return transformer_block_chain_output @ self.token_embedding.weight.T 
         # (batch, d_seq, d_model) -> (batch, d_seq, d_vocab) 
         # returns dot product of the output of the transformer block with each tokens embedded vector
         # essentially returning, "how similar is my output to each token in my vocabulary"
