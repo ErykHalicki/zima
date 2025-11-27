@@ -16,3 +16,4 @@ print(f"Parameters: {gpt.count_parameters()/1000000.0:.2f} M")
 
 # need a dataset
 # need to pre_process the dataset to be tokenized
+# 

@@ -4,11 +4,12 @@ from collections import deque
 import concurrent.futures
 import sys
 from tqdm import tqdm
+import h5py
 
 prefix = 'https://en.wikipedia.org/wiki/'
 max_workers = 10
 
-def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar = True):
+def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar = True, save_to_hdf5=False):
     '''
     start_link: string corresponding to wikipedia page title (not including wikipedia link)
     ex. start_link = "GPT-1" corresponds to the page https://en.wikipedia.org/wiki/GPT-1
@@ -21,6 +22,17 @@ def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar =
     start = node(start_link)
     current_page = start
     visited_page_dict = {}
+    total_word_count = 0
+
+    def format_number(num):
+        if num >= 1_000_000_000:
+            return f"{num / 1_000_000_000:.1f}B"
+        elif num >= 1_000_000:
+            return f"{num / 1_000_000:.1f}M"
+        elif num >= 1_000:
+            return f"{num / 1_000:.1f}K"
+        else:
+            return str(num)
 
     if show_progress_bar:
         pbar = tqdm(total=max_pages, desc="Scraping pages", unit="pages")
@@ -28,16 +40,20 @@ def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar =
         pbar = None
 
     def fetch_neighbor_batch(nodes):
+        nonlocal total_word_count
         unvisited = deque(nodes)
         while len(unvisited) > 0:
             def pop_and_fetch_neighbors():
+                nonlocal total_word_count
                 neighbor = unvisited.popleft()
                 if len(visited_page_dict) >= max_pages:
                     return
                 if neighbor.get_page_data():
                     visited_page_dict[neighbor.link] = neighbor
+                    total_word_count += len(neighbor.text.split())
                     if pbar:
                         pbar.n = len(visited_page_dict)
+                        pbar.set_postfix_str(f"{format_number(total_word_count)} words")
                         pbar.refresh()
                 return
 
@@ -48,13 +64,13 @@ def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar =
 
     start.get_page_data()
     visited_page_dict[start.link] = start
+    total_word_count += len(start.text.split())
     if pbar:
         pbar.n = len(visited_page_dict)
+        pbar.set_postfix_str(f"{format_number(total_word_count)} words")
         pbar.refresh()
 
     while len(visited_page_dict) < max_pages:
-        if pbar:
-            pbar.set_postfix_str(f"Current page: {current_page.link}")
         already_fetched_neighbors = {}
         for index, neighbor in enumerate(current_page.neighbors):
             if neighbor.link in visited_page_dict:
@@ -81,7 +97,7 @@ def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar =
 
 if __name__ == "__main__":
     if len(sys.argv) == 3:
-        print(len(scrape_wikipedia_topic(sys.argv[1], int(sys.argv[2]))))
+        scrape_wikipedia_topic(sys.argv[1], int(sys.argv[2]))
     else:
         print("Usage: scape.py LINK_TITLE MAX_PAGES")
 
