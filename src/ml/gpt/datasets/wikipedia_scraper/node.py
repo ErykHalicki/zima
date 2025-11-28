@@ -1,5 +1,7 @@
 from math import inf
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 
 HEADER = {
@@ -9,7 +11,20 @@ HEADER = {
 WIKIPEDIA_PREFIX = 'https://en.wikipedia.org/wiki/'
 
 MAX_LINKS = 10000
+
+session = requests.Session()
+retry = Retry(total=3, backoff_factor=0.1)
+adapter = HTTPAdapter(max_retries=retry, pool_connections=50, pool_maxsize=50)
+session.mount('https://', adapter)
+session.headers.update(HEADER)
 # max number of links to explore at each page (chooses first MAX_LINKS links)
+
+BANNED_TERMS = [
+    'Special:', 'Category:', 'Wikipedia:', 'Help:', 'File:', 'Portal:',
+    'Talk:', 'Template:', 'Template_talk:', 'User:', 'User_talk:',
+    'MediaWiki:', 'Module:', 'Draft:', 'TimedText:', 'Book:',
+    '(identifier)', '(disambiguation)', 'Main_Page'
+]
 
 class node:
     def __init__(self, link):
@@ -19,28 +34,18 @@ class node:
         self.page_data_fetched = False
 
     def valid_link(self, link):
-        if (link.startswith('/wiki/')
-            and 'Special:' not in link
-            and 'Category:' not in link
-            and 'Wikipedia:' not in link
-            and 'Help:' not in link
-            and 'File:' not in link
-            and 'Portal:' not in link
-            and '(identifier)' not in link
-            and 'Main_Page' not in link
-            and 'Talk:' not in link
-            and '(disambiguation)' not in link
-            and 'Template:' not in link
-            and link[6:] != self.link):
-            return True
-        return False
+        if not link.startswith('/wiki/'):
+            return False
+        if link[6:] == self.link:
+            return False
+        return not any(term in link for term in BANNED_TERMS)
 
     def get_similarity_to(self, target):
         if not self.page_data_fetched:
             raise Exception(f"Must fetch page data for: {self.link} before trying to get similarity")
         if not target.page_data_fetched:
             raise Exception(f"Must fetch page data for: {target.link} before trying to get similarity")
-        node_links, target_links = set([neighbor.link for neighbor in self.neighbors]), set([neighbor.link for neighbor in target.neighbors])
+        node_links, target_links = set(self.neighbors), set(target.neighbors)
         intersection = node_links.intersection(target_links)
         union = node_links.union(target_links)
         return (len(intersection) / len(union)) if intersection else -inf
@@ -50,18 +55,17 @@ class node:
         if(len(self.neighbors) != 0 or self.text is not None):
             return False
         try:
-            response = requests.get(WIKIPEDIA_PREFIX + self.link, headers=HEADER)
-            response.raise_for_status()  # Check for request errors
-            soup = BeautifulSoup(response.text, 'html.parser')
+            response = session.get(WIKIPEDIA_PREFIX + self.link, timeout=10)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, 'lxml')
 
-            # Extract neighbors
             neighbors_set = set()
-            neighbor_node_list = []
+            neighbor_link_list = []
             for a in soup.find_all('a', href=True):
                 if self.valid_link(a['href']) and a['href'][6:] not in neighbors_set:
-                    neighbor_node_list.append(node(a['href'][6:]))
+                    neighbor_link_list.append(a['href'][6:])
                     neighbors_set.add(a['href'][6:])
-            self.neighbors = neighbor_node_list[:MAX_LINKS]
+            self.neighbors = neighbor_link_list[:MAX_LINKS]
 
             # Extract cleaned page text
             for sup in soup.find_all('sup'):
