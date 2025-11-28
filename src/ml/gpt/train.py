@@ -8,135 +8,138 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import SequentialLR, LinearLR, CosineAnnealingLR
 from tqdm import tqdm
 import os
+import argparse
+import yaml
 
-TOPIC = "GPT-1"
-DATASET_PATH = f"~/datasets/data/wikipedia_{TOPIC}.hdf5"
-MODEL_PATH = "models/weights/"
-LOAD_MODEL = None
-#LOAD_MODEL = "models/weights/model_epoch_2.pt"
-CHUNK_SIZE = 128
-EPOCHS = 300
-NUM_LAYERS = 8
-NUM_HEADS = 4
-D_MODEL = 256
-LEARNING_RATE = 2.5e-4
-BATCH_SIZE = 1
-WARMUP_EPOCHS = 30
+def load_config(config_path):
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    return config
 
-device = torch.device("cpu")
-if torch.backends.mps.is_available():
-    device = torch.device("mps")
-if torch.cuda.is_available():
-    device = torch.device("cuda")
+def parse_args():
+    parser = argparse.ArgumentParser(description='Train GPT model')
+    parser.add_argument('--config', type=str, required=True, help='Path to YAML config file')
+    return parser.parse_args()
 
-full_dataset = TorchTextDataset(DATASET_PATH, chunk_size=CHUNK_SIZE)
-tokenizer = Tokenizer()
-tokenizer.vocabulary_from_numpy(full_dataset.get_vocabulary())
+if __name__ == "__main__":
+    args = parse_args()
+    config = load_config(args.config)
 
-start_epoch = 0
-if LOAD_MODEL:
-    checkpoint = torch.load(LOAD_MODEL, map_location=device)
-    hyperparams = checkpoint['hyperparameters']
-    NUM_LAYERS = hyperparams['num_layers']
-    NUM_HEADS = hyperparams['num_heads']
-    D_MODEL = hyperparams['d_model']
-    start_epoch = checkpoint['epoch']
-    print(f"Loaded checkpoint from {LOAD_MODEL}")
-    print(f"Hyperparameters: layers={NUM_LAYERS}, heads={NUM_HEADS}, d_model={D_MODEL}")
-    print(f"Resuming from epoch {start_epoch}")
+    MODEL_NAME = config.get('model_name', 'GPT-1')
+    DATASET_PATH = os.path.expanduser(config['dataset_path'])
+    MODEL_PATH = os.path.expanduser(config['model_path'])
+    LOAD_MODEL = os.path.expanduser(config['checkpoint_path']) if config.get('checkpoint_path') else None
+    CHUNK_SIZE = config.get('chunk_size', 128)
+    EPOCHS = config.get('epochs', 300)
+    NUM_LAYERS = config.get('num_layers', 8)
+    NUM_HEADS = config.get('num_heads', 4)
+    D_MODEL = config.get('d_model', 256)
+    LEARNING_RATE = config.get('learning_rate', 2.5e-4)
+    BATCH_SIZE = config.get('batch_size', 1)
+    WARMUP_EPOCHS = config.get('warmup_epochs', 30)
+    NUM_WORKERS = config.get('num_workers', 4)
+    CHECKPOINT_INTERVAL = config.get('checkpoint_interval', 30)
 
-model = GPT(NUM_LAYERS, NUM_HEADS, D_MODEL, tokenizer.vocabulary_length(), device=device)
+    device = torch.device("cpu")
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
 
-if LOAD_MODEL:
-    model.load_state_dict(checkpoint['model_state_dict'])
+    full_dataset = TorchTextDataset(DATASET_PATH, chunk_size=CHUNK_SIZE)
+    tokenizer = Tokenizer()
+    tokenizer.vocabulary_from_numpy(full_dataset.get_vocabulary())
 
-print(f"Parameters: {model.count_parameters()/1000000.0:.2f} M")
+    start_epoch = 0
+    if LOAD_MODEL:
+        checkpoint = torch.load(LOAD_MODEL, map_location=device)
+        hyperparams = checkpoint['hyperparameters']
+        NUM_LAYERS = hyperparams['num_layers']
+        NUM_HEADS = hyperparams['num_heads']
+        D_MODEL = hyperparams['d_model']
+        start_epoch = checkpoint['epoch']
+        print(f"Loaded checkpoint from {LOAD_MODEL}")
+        print(f"Hyperparameters: layers={NUM_LAYERS}, heads={NUM_HEADS}, d_model={D_MODEL}")
+        print(f"Resuming from epoch {start_epoch}")
 
-'''
-train_size = int( * len(full_dataset))
-test_size = len(full_dataset) - train_size
+    model = GPT(NUM_LAYERS, NUM_HEADS, D_MODEL, tokenizer.vocabulary_length(), device=device)
 
-train_dataset, test_dataset = random_split(
-    full_dataset,
-    [train_size, test_size],
-    generator=torch.Generator().manual_seed(514)
-)
-test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory = True)
-'''
-dataloader = DataLoader(full_dataset, batch_size=BATCH_SIZE, shuffle=False, pin_memory = True, num_workers=4, persistent_workers=True)
+    if LOAD_MODEL:
+        model.load_state_dict(checkpoint['model_state_dict'])
 
-loss_criterion = nn.CrossEntropyLoss(ignore_index=PAD_TOKEN_ID)
-optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
-scaler = torch.amp.GradScaler(device.type)
+    print(f"Parameters: {model.count_parameters()/1000000.0:.2f} M")
 
-warmup_scheduler = LinearLR(optimizer, start_factor=0.01, end_factor=1.0, total_iters=WARMUP_EPOCHS)
-cosine_scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS - WARMUP_EPOCHS, eta_min=0)
-scheduler = SequentialLR(optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[WARMUP_EPOCHS])
+    dataloader = DataLoader(full_dataset, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True, num_workers=NUM_WORKERS, persistent_workers=True if NUM_WORKERS > 0 else False)
 
-if LOAD_MODEL:
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    if 'scheduler_state_dict' in checkpoint:
-        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-    del checkpoint
+    loss_criterion = nn.CrossEntropyLoss(ignore_index=PAD_TOKEN_ID)
+    optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
+    scaler = torch.amp.GradScaler(device.type)
 
-print(tokenizer.untokenize(full_dataset[0]['chunks'].numpy()))
+    warmup_scheduler = LinearLR(optimizer, start_factor=0.01, end_factor=1.0, total_iters=WARMUP_EPOCHS)
+    cosine_scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS - WARMUP_EPOCHS, eta_min=0)
+    scheduler = SequentialLR(optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[WARMUP_EPOCHS])
 
-model.train()
-for epoch in range(EPOCHS):
-    progress_bar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
-    for batch in progress_bar:
-        with torch.amp.autocast(device.type):
-            batch_chunks = batch['chunks'].to(device)
-            batch_padding_masks = batch['masks'].to(device)
-            #print(batch_padding_masks[0])
+    if LOAD_MODEL:
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if 'scheduler_state_dict' in checkpoint:
+            scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        del checkpoint
 
-            seq_len = batch_chunks.shape[1]
-            causal_mask = torch.tril(torch.ones(seq_len, seq_len)).unsqueeze(0).to(device)
-            #lower triangular matrix forcing model to only attend to current and past tokens
+    print(tokenizer.untokenize(full_dataset[0]['chunks'].numpy()))
 
-            padding_mask = batch_padding_masks.unsqueeze(1) # (batch, d_seq) -> (batch, 1, d_seq)
-            combined_mask = causal_mask * padding_mask # removes 1's from causal mask at token positions that are masked
+    model.train()
+    for epoch in range(EPOCHS):
+        progress_bar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
+        for batch in progress_bar:
+            with torch.amp.autocast(device.type):
+                batch_chunks = batch['chunks'].to(device)
+                batch_padding_masks = batch['masks'].to(device)
 
-            #print(combined_mask)
+                seq_len = batch_chunks.shape[1]
+                causal_mask = torch.tril(torch.ones(seq_len, seq_len)).unsqueeze(0).to(device)
 
+                padding_mask = batch_padding_masks.unsqueeze(1)
+                combined_mask = causal_mask * padding_mask
+
+                logits = model(batch_chunks, mask=combined_mask)
+
+                target_tokens = batch_chunks[:, 1:]
+                logits = logits[:, :-1, :]
+
+                batch_size, seq_len_minus_1, vocab_size = logits.shape
+                logits_flat = logits.reshape(batch_size * seq_len_minus_1, vocab_size)
+                targets_flat = target_tokens.reshape(batch_size * seq_len_minus_1)
+
+                loss = loss_criterion(logits_flat, targets_flat)
+
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            scaler.step(optimizer)
+            scaler.update()
             optimizer.zero_grad()
-            logits = model(batch_chunks, mask=combined_mask)
 
-            # for token sequence ABCD
-            target_tokens = batch_chunks[:, 1:]# ABCD -> BCD
-            logits = logits[:, :-1, :] # BCDE -> BCD
+            progress_bar.set_postfix({'loss': f'{loss.item():.4f}', 'lr': f'{scheduler.get_last_lr()[0]:.6f}'})
 
-            batch_size, seq_len_minus_1, vocab_size = logits.shape
-            logits_flat = logits.reshape(batch_size * seq_len_minus_1, vocab_size)
-            targets_flat = target_tokens.reshape(batch_size * seq_len_minus_1)
+        scheduler.step()
 
-            loss = loss_criterion(logits_flat, targets_flat)
-
-        scaler.scale(loss).backward()
-        scaler.step(optimizer)
-        scaler.update()
-
-        progress_bar.set_postfix({'loss': f'{loss.item():.4f}', 'lr': f'{scheduler.get_last_lr()[0]:.6f}'})
-
-    scheduler.step()
-
-    if epoch % 30 == 0:
-        checkpoint = {
-            'epoch': epoch + 1,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'scheduler_state_dict': scheduler.state_dict(),
-            'hyperparameters': {
-                'num_layers': NUM_LAYERS,
-                'num_heads': NUM_HEADS,
-                'd_model': D_MODEL,
-                'vocab_size': tokenizer.vocabulary_length(),
-                'chunk_size': CHUNK_SIZE,
-                'learning_rate': LEARNING_RATE,
-                'batch_size': BATCH_SIZE
-            },
-            'vocabulary': tokenizer.vocabulary,
-            'inverse_vocabulary': tokenizer.inverse_vocabulary
-        }
-        torch.save(checkpoint, os.path.join(MODEL_PATH, f'{TOPIC}_GPT.pt'))
+        if epoch % CHECKPOINT_INTERVAL == 0:
+            checkpoint = {
+                'epoch': epoch + 1,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict(),
+                'hyperparameters': {
+                    'num_layers': NUM_LAYERS,
+                    'num_heads': NUM_HEADS,
+                    'd_model': D_MODEL,
+                    'vocab_size': tokenizer.vocabulary_length(),
+                    'chunk_size': CHUNK_SIZE,
+                    'learning_rate': LEARNING_RATE,
+                    'batch_size': BATCH_SIZE
+                },
+                'vocabulary': tokenizer.vocabulary,
+                'inverse_vocabulary': tokenizer.inverse_vocabulary
+            }
+            torch.save(checkpoint, os.path.join(MODEL_PATH, f'{MODEL_NAME}.pt'))
 

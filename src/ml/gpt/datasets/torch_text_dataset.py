@@ -36,14 +36,9 @@ class TorchTextDataset(TextDataset, Dataset):
                 self.chunks.append(chunk)
                 self.masks.append(mask)
 
-        total_tokens = sum(len(chunk) for chunk in self.chunks)
-        end_count = sum((chunk == END_TOKEN_ID).sum().item() for chunk in self.chunks)
-        print(f"{END_TOKEN_ID} tokens: {end_count}/{total_tokens} = {100*end_count/total_tokens:.1f}%")
-
     def __len__(self):
         return len(self.chunks)
 
     def __getitem__(self, idx):
         return {'chunks': self.chunks[idx].detach(), 'masks': self.masks[idx].detach()}
-        #if token at index
         

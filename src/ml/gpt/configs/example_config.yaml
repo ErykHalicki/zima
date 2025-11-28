@@ -1,0 +1,14 @@
+model_name: "GPT-1"
+dataset_path: "~/datasets/wikipedia_GPT-1.hdf5"
+model_path: "~/model_weights/"
+# checkpoint_path: ~/model_weights/GPT-1.pt
+chunk_size: 128
+epochs: 300
+num_layers: 8
+num_heads: 4
+d_model: 256
+learning_rate: 2.5e-4
+batch_size: 1
+warmup_epochs: 30
+num_workers: 4
+checkpoint_interval: 30
