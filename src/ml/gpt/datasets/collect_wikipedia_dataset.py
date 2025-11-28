@@ -1,17 +1,16 @@
 from .wikipedia_scraper.scrape import scrape_wikipedia_topic
 from .tokenizer import Tokenizer
 from .text_dataset import TextDataset
-import numpy as np
 
 # Run using python -m datasets.collect_wikipedia_dataset
 
 # Arguments
 # -------------
 
-TOPIC = "GPT-1"
-PAGE_COUNT = 1
+TOPIC = "Machine_learning"
+PAGE_COUNT = 10000
 VOCABULARY_MAX_CORPUS_LENGTH = 100000000
-DATASET_PATH = f"~/datasets/data/wikipedia_{TOPIC}.hdf5"
+DATASET_PATH = f"~/datasets/wikipedia_{TOPIC}.hdf5"
 
 # -------------
 

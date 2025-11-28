@@ -8,7 +8,7 @@ HEADER = {
 
 WIKIPEDIA_PREFIX = 'https://en.wikipedia.org/wiki/'
 
-MAX_LINKS = 100
+MAX_LINKS = 10000
 # max number of links to explore at each page (chooses first MAX_LINKS links)
 
 class node:
