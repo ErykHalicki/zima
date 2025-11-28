@@ -12,12 +12,25 @@ class Tokenizer:
         self.vocabulary = {} # {token: index}
         self.inverse_vocabulary = {} # {index: token}
 
-    def calculate_vocabulary_from_text(self, text):
+    def calculate_vocabulary_from_text(self, text, max_vocabulary_size=None):
         self.vocabulary.clear()
-        vocabulary_set = set([char for char in text])
-        vocabulary_list = list(vocabulary_set)
-        vocabulary_list.sort(key=ord) # sort by unicode value to make more reproducible
-        
+
+        token_freq = {}
+        for char in text:
+            token_freq[char] = token_freq.get(char, 0) + 1
+
+        sorted_tokens = sorted(token_freq.items(), key=lambda x: x[1], reverse=True)
+
+        if max_vocabulary_size is not None:
+            max_regular_tokens = max_vocabulary_size - 3
+            if max_regular_tokens < 0:
+                max_regular_tokens = 0
+            vocabulary_list = [token for token, freq in sorted_tokens[:max_regular_tokens]]
+        else:
+            vocabulary_list = [token for token, freq in sorted_tokens]
+
+        vocabulary_list.sort(key=ord)
+
         self.vocabulary[PAD_TOKEN] = PAD_TOKEN_ID
         self.inverse_vocabulary[PAD_TOKEN_ID] = PAD_TOKEN
         self.vocabulary[UNKOWN_TOKEN] = UNKOWN_TOKEN_ID

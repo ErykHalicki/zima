@@ -8,14 +8,17 @@ from .text_dataset import TextDataset
 # -------------
 
 TOPIC = "Machine_learning"
-PAGE_COUNT = 10000
-VOCABULARY_MAX_CORPUS_LENGTH = 100000000
+PAGE_COUNT = 5000
+MAX_VOCAB_SIZE = 150
+VOCABULARY_MAX_CORPUS_LENGTH = 10_000_000
 DATASET_PATH = f"~/datasets/wikipedia_{TOPIC}.hdf5"
 
 # -------------
 
-wikipedia_page_dictionary = scrape_wikipedia_topic(TOPIC, PAGE_COUNT)
+dataset = TextDataset(DATASET_PATH)
 tokenizer = Tokenizer()
+
+wikipedia_page_dictionary = scrape_wikipedia_topic(TOPIC, PAGE_COUNT)
 
 sample_corpus = ""
 
@@ -24,9 +27,8 @@ for page in wikipedia_page_dictionary.values():
         break
     sample_corpus+=page.text
 
-tokenizer.calculate_vocabulary_from_text(sample_corpus)
+tokenizer.calculate_vocabulary_from_text(sample_corpus[:VOCABULARY_MAX_CORPUS_LENGTH])
 
-dataset = TextDataset(DATASET_PATH)
 dataset.add_vocabulary(tokenizer.vocabulary_to_numpy())
 dataset.add_documents({name: tokenizer.tokenize(page.text) for name, page in wikipedia_page_dictionary.items()})
 
