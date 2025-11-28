@@ -34,7 +34,7 @@ frequencies = [freq for token, freq in sorted_tokens]
 total_count = sum(frequencies)
 
 cumulative = np.cumsum(frequencies) / total_count
-
+'''
 plt.figure(figsize=(12, 6))
 plt.plot(range(len(cumulative)), cumulative)
 plt.xlabel('Token Rank (most common to least common)')
@@ -43,6 +43,7 @@ plt.title('Token Frequency Cumulative Distribution Function')
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
+'''
 
 print(f"\nTotal unique tokens: {len(sorted_tokens)}")
 print(f"Total token count: {total_count}")

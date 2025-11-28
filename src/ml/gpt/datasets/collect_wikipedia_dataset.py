@@ -6,8 +6,8 @@ import os
 
 # Arguments
 # -------------
-TOPIC = "WALL-E"
-PAGE_COUNT = 100000
+TOPIC = "GPT-1"
+PAGE_COUNT = 10
 DATASET_PATH = f"~/datasets/wikipedia_{TOPIC}_unicode.hdf5"
 STATE_PATH = f"~/datasets/wikipedia_{TOPIC}_scrape_state.json"
 # -------------

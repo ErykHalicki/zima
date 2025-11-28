@@ -1,6 +1,6 @@
 from .text_dataset import TextDataset
 from torch.utils.data import Dataset
-from .tokenizer import PAD_TOKEN_ID, END_TOKEN_ID 
+from .tokenizer import PAD_TOKEN_ID, UNKNOWN_TOKEN_ID
 import torch
 
 class TorchTextDataset(TextDataset, Dataset):
@@ -40,6 +40,8 @@ class TorchTextDataset(TextDataset, Dataset):
                 start_idx = i * chunk_size
                 end_idx = min(start_idx + chunk_size, len(doc))
                 chunk = torch.tensor(doc[start_idx:end_idx])
+                chunk[chunk == UNKNOWN_TOKEN_ID] = PAD_TOKEN_ID
+                # replace UNK with PAD
 
                 mask = torch.ones(chunk_size, dtype=torch.long)
 

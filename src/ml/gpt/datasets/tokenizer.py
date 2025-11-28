@@ -1,7 +1,10 @@
 import numpy as np
+from tqdm import tqdm
+import json
+import os
 
-UNKOWN_TOKEN= "{UNK}"
-UNKOWN_TOKEN_ID = 2
+UNKNOWN_TOKEN= "{UNK}"
+UNKNOWN_TOKEN_ID = 2
 END_TOKEN = "{END}"
 END_TOKEN_ID = 1
 PAD_TOKEN = "{PAD}"
@@ -12,16 +15,37 @@ class Tokenizer:
         self.vocabulary = {} # {token: index}
         self.inverse_vocabulary = {} # {index: token}
 
+    def calculate_vocabulary_from_json(self, file_path, max_vocabulary_size=None):
+        with open(os.path.expanduser(file_path), 'r') as f:
+            token_freq = json.load(f)
+        return self.calculate_vocabulary_from_token_frequency(token_freq, max_vocabulary_size)
+
     def get_token_frequency(self, text):
         token_freq = {}
         for char in text:
             token_freq[char] = token_freq.get(char, 0) + 1
         return token_freq
 
-    def calculate_vocabulary_from_text(self, text, max_vocabulary_size=None):
-        self.vocabulary.clear()
+    def calculate_vocabulary_from_unicode_dataset(self, text_dataset, max_vocabulary_size=None, json_save_path=None):
+        if not text_dataset.unicode_vocabulary:
+            raise Exception("Input dataset must be in unicode_vocabulary mode. This method only processes unicode datasets.")
 
-        token_freq = self.get_token_frequency(text)
+        document_names = text_dataset.get_document_name_list()
+
+        token_freq = {}
+        for doc_name in tqdm(document_names, desc="Reading documents", unit="docs"):
+            unicode_array = text_dataset.get_document(doc_name)
+            text = ''.join([chr(code) for code in unicode_array])
+            doc_token_freq = self.get_token_frequency(text)
+            for token in doc_token_freq:
+                token_freq[token] = token_freq.get(token, 0) + doc_token_freq[token] 
+        if json_save_path is not None:
+            with open(os.path.expanduser(json_save_path), 'w') as f:
+                json.dump(token_freq , f, ensure_ascii=False)
+        return self.calculate_vocabulary_from_token_frequency(token_freq)
+
+    def calculate_vocabulary_from_token_frequency(self, token_freq, max_vocabulary_size=None):
+        self.vocabulary.clear()
         sorted_tokens = sorted(token_freq.items(), key=lambda x: x[1], reverse=True)
 
         total_token_count = sum(freq for token, freq in sorted_tokens)
@@ -42,8 +66,8 @@ class Tokenizer:
 
         self.vocabulary[PAD_TOKEN] = PAD_TOKEN_ID
         self.inverse_vocabulary[PAD_TOKEN_ID] = PAD_TOKEN
-        self.vocabulary[UNKOWN_TOKEN] = UNKOWN_TOKEN_ID
-        self.inverse_vocabulary[UNKOWN_TOKEN_ID] = UNKOWN_TOKEN
+        self.vocabulary[UNKNOWN_TOKEN] = UNKNOWN_TOKEN_ID
+        self.inverse_vocabulary[UNKNOWN_TOKEN_ID] = UNKNOWN_TOKEN
         self.vocabulary[END_TOKEN] = END_TOKEN_ID
         self.inverse_vocabulary[END_TOKEN_ID] = END_TOKEN
 
@@ -53,11 +77,15 @@ class Tokenizer:
             self.inverse_vocabulary[index+start_index] = key
 
         return unknown_fraction
-    
+
+    def calculate_vocabulary_from_text(self, text, max_vocabulary_size=None):
+        token_freq = self.get_token_frequency(text)
+        return self.calculate_vocabulary_from_token_frequency(token_freq, max_vocabulary_size)
+            
     def vocabulary_length(self):
         return len(self.vocabulary)
 
-    def tokenize(self, text):
+    def tokenize(self, text, with_end_token=True):
         '''
         text: python string to be converted to list of vocabulary indices
         '''
@@ -68,8 +96,9 @@ class Tokenizer:
             if char in self.vocabulary:
                 result.append(self.vocabulary[char])
             else:
-                result.append(self.vocabulary[UNKOWN_TOKEN])
-        result.append(self.vocabulary[END_TOKEN])
+                result.append(self.vocabulary[UNKNOWN_TOKEN])
+        if with_end_token:
+            result.append(self.vocabulary[END_TOKEN])
         return np.array(result)
 
     def untokenize(self, data):
@@ -95,7 +124,7 @@ class Tokenizer:
             self.inverse_vocabulary[index] = token
         self.vocabulary[PAD_TOKEN] = PAD_TOKEN_ID
         self.inverse_vocabulary[PAD_TOKEN_ID] = PAD_TOKEN
-        self.vocabulary[UNKOWN_TOKEN] = UNKOWN_TOKEN_ID
-        self.inverse_vocabulary[UNKOWN_TOKEN_ID] = UNKOWN_TOKEN
+        self.vocabulary[UNKNOWN_TOKEN] = UNKNOWN_TOKEN_ID
+        self.inverse_vocabulary[UNKNOWN_TOKEN_ID] = UNKNOWN_TOKEN
         self.vocabulary[END_TOKEN] = END_TOKEN_ID
         self.inverse_vocabulary[END_TOKEN_ID] = END_TOKEN

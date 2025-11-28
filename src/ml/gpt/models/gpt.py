@@ -1,6 +1,8 @@
+from math import inf
 import torch
 from torch import nn
 from .attention import MultiHeadAttention
+from ..datasets.tokenizer import UNKOWN_TOKEN_ID, PAD_TOKEN_ID
 
 MAX_SEQUENCE_LENGTH = 10000
 DROPOUT_RATE = 0.1
@@ -85,6 +87,8 @@ class GPT(nn.Module):
         x = torch.unsqueeze(x, 0) # (1, d_seq)
         logits = torch.squeeze(self.forward(x,mask))[-1]/temperature
         # remove all dimensions and entries other than the one corresponding to the last token (d_vocab)
+        logits[UNKOWN_TOKEN_ID] = -inf
+        logits[PAD_TOKEN_ID] = -inf
         probabilities = self.softmax(logits) # (d_vocab) but summing to 1
         return torch.multinomial(probabilities, 1).cpu().item() 
         # sample the next token probabilities corresponding the last token in the sequence

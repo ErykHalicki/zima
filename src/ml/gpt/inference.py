@@ -36,7 +36,7 @@ gpt.eval()
 print(f"Loaded model from {MODEL_PATH}")
 print(f"Parameters: {gpt.count_parameters()/1000000.0:.2f} M")
 print(input, end='',flush=True)
-text = torch.from_numpy(tokenizer.tokenize(input))[:-1].to(device)
+text = torch.from_numpy(tokenizer.tokenize(input, with_end_token=False)).to(device)
 
 while len(text) < MAX_TEXT_LENGTH and END_TOKEN_ID not in text:
     context = text[-CONTEXT_WINDOW:] if len(text) > CONTEXT_WINDOW else text
