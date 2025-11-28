@@ -3,8 +3,8 @@ from .datasets.tokenizer import Tokenizer, END_TOKEN_ID
 import torch
 import os
 
-MODEL_PATH = f"~/model_weights/Machine_learning_GPT-1.pt"
-CONTEXT_WINDOW = 256
+MODEL_PATH = f"~/model_weights/WALL-E_GPT-1.pt"
+CONTEXT_WINDOW = 512
 TEMPERATURE = 1.0
 MAX_TEXT_LENGTH = 10000
 

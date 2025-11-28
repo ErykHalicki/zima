@@ -11,6 +11,7 @@ import os
 import argparse
 import yaml
 import subprocess
+import time
 
 try:
     from torch.amp import GradScaler
@@ -64,6 +65,7 @@ if __name__ == "__main__":
     WARMUP_EPOCHS = config.get('warmup_epochs', 30)
     NUM_WORKERS = config.get('num_workers', 4)
     CHECKPOINT_INTERVAL = config.get('checkpoint_interval', 30)
+    TIME_BASED_SAVE_INTERVAL = config.get('time_based_save_interval', 600)
     SAVE_TO_S3 = config.get('save_to_s3', False)
     S3_PATH = config.get('s3_path', '')
 
@@ -77,7 +79,7 @@ if __name__ == "__main__":
     tokenizer = Tokenizer()
     tokenizer.vocabulary_from_numpy(full_dataset.get_vocabulary())
 
-    val_size = int(0.05 * len(full_dataset))
+    val_size = int(0.1 * len(full_dataset))
     train_size = len(full_dataset) - val_size
     train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
 
@@ -110,15 +112,19 @@ if __name__ == "__main__":
     except TypeError:
         scaler = GradScaler()
 
-    warmup_scheduler = LinearLR(optimizer, start_factor=0.01, end_factor=1.0, total_iters=WARMUP_EPOCHS)
-    cosine_scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS - WARMUP_EPOCHS, eta_min=0)
-    scheduler = SequentialLR(optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[WARMUP_EPOCHS])
+    total_steps = EPOCHS * len(train_dataloader)
+    warmup_steps = WARMUP_EPOCHS * len(train_dataloader)
+    warmup_scheduler = LinearLR(optimizer, start_factor=0.01, end_factor=1.0, total_iters=warmup_steps)
+    cosine_scheduler = CosineAnnealingLR(optimizer, T_max=total_steps - warmup_steps, eta_min=0)
+    scheduler = SequentialLR(optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[warmup_steps])
 
     if LOAD_MODEL:
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         if 'scheduler_state_dict' in checkpoint:
             scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         del checkpoint
+
+    last_save_time = time.time()
 
     for epoch in range(start_epoch, EPOCHS):
         model.train()
@@ -151,8 +157,38 @@ if __name__ == "__main__":
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
+            scheduler.step()
 
             progress_bar.set_postfix({'loss': f'{loss.item():.4f}', 'lr': f'{scheduler.get_last_lr()[0]:.6f}'})
+
+            current_time = time.time()
+            if current_time - last_save_time >= TIME_BASED_SAVE_INTERVAL:
+                checkpoint = {
+                    'epoch': epoch + 1,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'scheduler_state_dict': scheduler.state_dict(),
+                    'hyperparameters': {
+                        'num_layers': NUM_LAYERS,
+                        'num_heads': NUM_HEADS,
+                        'd_model': D_MODEL,
+                        'vocab_size': tokenizer.vocabulary_length(),
+                        'chunk_size': CHUNK_SIZE,
+                        'learning_rate': LEARNING_RATE,
+                        'batch_size': BATCH_SIZE
+                    },
+                    'vocabulary': tokenizer.vocabulary,
+                    'inverse_vocabulary': tokenizer.inverse_vocabulary
+                }
+                local_checkpoint_path = os.path.join(MODEL_PATH, f'{MODEL_NAME}.pt')
+                torch.save(checkpoint, local_checkpoint_path)
+
+                if SAVE_TO_S3 and S3_PATH:
+                    s3_checkpoint_path = os.path.join(S3_PATH, f'{MODEL_NAME}.pt')
+                    upload_to_s3(local_checkpoint_path, s3_checkpoint_path)
+
+                last_save_time = current_time
+                print(f"\nTime-based checkpoint saved at epoch {epoch+1}")
 
         model.eval()
         val_loss = 0.0
@@ -184,8 +220,6 @@ if __name__ == "__main__":
 
         avg_val_loss = val_loss / num_val_batches
         print(f"Epoch {epoch+1}/{EPOCHS} - Validation Loss: {avg_val_loss:.4f}")
-
-        scheduler.step()
 
         if epoch % CHECKPOINT_INTERVAL == 0:
             checkpoint = {
