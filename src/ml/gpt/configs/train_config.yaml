@@ -12,3 +12,5 @@ batch_size: 1
 warmup_epochs: 30
 num_workers: 4
 checkpoint_interval: 30
+save_to_s3: True
+s3_path: "s3://zima-data/model_weights/"

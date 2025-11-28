@@ -10,11 +10,26 @@ from tqdm import tqdm
 import os
 import argparse
 import yaml
+import subprocess
 
 def load_config(config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
     return config
+
+def upload_to_s3(local_path, s3_path):
+    try:
+        result = subprocess.run(
+            ['aws', 's3', 'cp', local_path, s3_path],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        print(f"Successfully uploaded {local_path} to {s3_path}")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to upload to S3: {e.stderr}")
+        return False
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train GPT model')
@@ -39,6 +54,8 @@ if __name__ == "__main__":
     WARMUP_EPOCHS = config.get('warmup_epochs', 30)
     NUM_WORKERS = config.get('num_workers', 4)
     CHECKPOINT_INTERVAL = config.get('checkpoint_interval', 30)
+    SAVE_TO_S3 = config.get('save_to_s3', False)
+    S3_PATH = config.get('s3_path', '')
 
     device = torch.device("cpu")
     if torch.backends.mps.is_available():
@@ -141,5 +158,10 @@ if __name__ == "__main__":
                 'vocabulary': tokenizer.vocabulary,
                 'inverse_vocabulary': tokenizer.inverse_vocabulary
             }
-            torch.save(checkpoint, os.path.join(MODEL_PATH, f'{MODEL_NAME}.pt'))
+            local_checkpoint_path = os.path.join(MODEL_PATH, f'{MODEL_NAME}.pt')
+            torch.save(checkpoint, local_checkpoint_path)
+
+            if SAVE_TO_S3 and S3_PATH:
+                s3_checkpoint_path = os.path.join(S3_PATH, f'{MODEL_NAME}.pt')
+                upload_to_s3(local_checkpoint_path, s3_checkpoint_path)
 
