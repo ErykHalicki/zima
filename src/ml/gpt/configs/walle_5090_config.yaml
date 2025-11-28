@@ -8,7 +8,7 @@ num_layers: 10
 num_heads: 8
 d_model: 512
 learning_rate: 2.5e-4
-batch_size: 96
+batch_size: 80
 warmup_epochs: 1
 num_workers: 8
 checkpoint_interval: 1
