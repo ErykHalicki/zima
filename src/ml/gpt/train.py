@@ -11,8 +11,6 @@ import os
 import argparse
 import yaml
 import subprocess
-import sys
-sys.path.append(".")#hack to use all packages in this directory
 
 try:
     from torch.amp import GradScaler

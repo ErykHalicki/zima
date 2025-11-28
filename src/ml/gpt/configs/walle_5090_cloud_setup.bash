@@ -36,5 +36,5 @@ else
     echo "Dataset already exists, skipping download"
 fi
 
-python train.py --config configs/walle_5090_config.yaml
+python -m train --config configs/walle_5090_config.yaml
 
