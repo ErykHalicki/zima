@@ -2,7 +2,7 @@ model_name: "WALL-E_GPT-1"
 dataset_path: "~/datasets/wikipedia_WALL-E_tokenized.hdf5"
 model_path: "~/model_weights/"
 checkpoint_path: "~/model_weights/WALL-E_GPT-1.pt"
-chunk_size: 512
+chunk_size: 400
 epochs: 100
 num_layers: 12
 num_heads: 12
