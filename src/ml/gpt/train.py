@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     print(f"Parameters: {model.count_parameters()/1000000.0:.2f} M")
 
-    dataloader = DataLoader(full_dataset, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True, num_workers=NUM_WORKERS, persistent_workers=True if NUM_WORKERS > 0 else False)
+    dataloader = DataLoader(full_dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=NUM_WORKERS, persistent_workers=True if NUM_WORKERS > 0 else False)
 
     loss_criterion = nn.CrossEntropyLoss(ignore_index=PAD_TOKEN_ID)
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     print(tokenizer.untokenize(full_dataset[0]['chunks'].numpy()))
 
     model.train()
-    for epoch in range(EPOCHS):
+    for epoch in range(start_epoch, EPOCHS):
         progress_bar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
         for batch in progress_bar:
             with torch.amp.autocast(device.type):
