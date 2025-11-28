@@ -2,13 +2,13 @@ model_name: "Machine_learning_GPT-1"
 dataset_path: "~/datasets/wikipedia_Machine_learning.hdf5"
 model_path: "~/model_weights/"
 # checkpoint_path: ~/model_weights/GPT-1.pt
-chunk_size: 512
+chunk_size: 256
 epochs: 300
 num_layers: 8
 num_heads: 4
 d_model: 256
 learning_rate: 2.5e-4
-batch_size: 256
+batch_size: 128
 warmup_epochs: 30
 num_workers: 4
 checkpoint_interval: 30
