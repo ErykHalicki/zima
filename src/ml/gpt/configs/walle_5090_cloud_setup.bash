@@ -1,4 +1,3 @@
-#!/bin/bash
 set -e
 
 mkdir -p ~/datasets
@@ -8,7 +7,7 @@ apt-get update && apt-get install -y git unzip
 
 if [ ! -f /usr/local/bin/aws ]; then
     echo "Installing AWS CLI..."
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o "awscliv2.zip"
     unzip awscliv2.zip
     ./aws/install
     rm -rf aws awscliv2.zip

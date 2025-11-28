@@ -2,6 +2,8 @@ from models.gpt import GPT
 from datasets.tokenizer import Tokenizer, END_TOKEN_ID
 import torch
 import os
+import sys
+sys.path.append(".")#hack to use all packages in this directory
 
 MODEL_PATH = f"~/model_weights/Machine_learning_GPT-1.pt"
 CONTEXT_WINDOW = 256
