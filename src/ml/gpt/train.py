@@ -12,6 +12,14 @@ import argparse
 import yaml
 import subprocess
 
+try:
+    from torch.amp import GradScaler
+except ImportError:
+    try:
+        from torch.cuda.amp import GradScaler
+    except ImportError:
+        GradScaler = None
+
 def load_config(config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
@@ -90,7 +98,10 @@ if __name__ == "__main__":
 
     loss_criterion = nn.CrossEntropyLoss(ignore_index=PAD_TOKEN_ID)
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
-    scaler = torch.amp.GradScaler(device.type)
+    try:
+        scaler = GradScaler(device.type)
+    except TypeError:
+        scaler = GradScaler()
 
     warmup_scheduler = LinearLR(optimizer, start_factor=0.01, end_factor=1.0, total_iters=WARMUP_EPOCHS)
     cosine_scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS - WARMUP_EPOCHS, eta_min=0)
