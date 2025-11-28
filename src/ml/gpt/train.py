@@ -80,7 +80,7 @@ if __name__ == "__main__":
     train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
 
     start_epoch = 0
-    if LOAD_MODEL:
+    if LOAD_MODEL and os.path.exists(LOAD_MODEL):
         checkpoint = torch.load(LOAD_MODEL, map_location=device)
         hyperparams = checkpoint['hyperparameters']
         NUM_LAYERS = hyperparams['num_layers']
