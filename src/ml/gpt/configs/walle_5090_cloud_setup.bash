@@ -25,9 +25,9 @@ if [ ! -d "zima" ]; then
 else
     echo "Zima repository already exists, skipping clone"
 fi
-cd zima/src/ml/gpt
+cd zima/src/ml
 
-pip install -r requirements.txt
+pip install -r gpt/requirements.txt
 
 if [ ! -f ~/datasets/wikipedia_WALL-E_tokenized.hdf5 ]; then
     echo "Downloading dataset..."
@@ -36,5 +36,5 @@ else
     echo "Dataset already exists, skipping download"
 fi
 
-python -m train --config configs/walle_5090_config.yaml
+python -m gpt.train --config gpt/configs/walle_5090_config.yaml
 

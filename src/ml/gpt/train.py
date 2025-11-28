@@ -1,6 +1,6 @@
-from models.gpt import GPT
-from datasets.tokenizer import Tokenizer, PAD_TOKEN_ID
-from datasets.torch_text_dataset import TorchTextDataset
+from .models.gpt import GPT
+from .datasets.tokenizer import Tokenizer, PAD_TOKEN_ID
+from .datasets.torch_text_dataset import TorchTextDataset
 from torch.utils.data import DataLoader, random_split
 import torch
 import torch.nn as nn

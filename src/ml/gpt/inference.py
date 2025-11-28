@@ -1,5 +1,5 @@
-from models.gpt import GPT
-from datasets.tokenizer import Tokenizer, END_TOKEN_ID
+from .models.gpt import GPT
+from .datasets.tokenizer import Tokenizer, END_TOKEN_ID
 import torch
 import os
 
