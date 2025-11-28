@@ -3,7 +3,12 @@ set -e
 mkdir -p ~/datasets
 mkdir -p ~/model_weights
 
-apt-get update && apt-get install -y git unzip
+if ! command -v git &> /dev/null || ! command -v unzip &> /dev/null; then
+    echo "Installing missing packages (git/unzip)..."
+    apt-get update && apt-get install -y git unzip
+else
+    echo "git and unzip already installed, skipping installation"
+fi
 
 if [ ! -f /usr/local/bin/aws ]; then
     echo "Installing AWS CLI..."
