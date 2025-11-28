@@ -52,6 +52,8 @@ if __name__ == "__main__":
     DATASET_PATH = os.path.expanduser(config['dataset_path'])
     MODEL_PATH = os.path.expanduser(config['model_path'])
     LOAD_MODEL = os.path.expanduser(config['checkpoint_path']) if config.get('checkpoint_path') else None
+    if not os.path.exists(LOAD_MODEL):
+        LOAD_MODEL = None
     CHUNK_SIZE = config.get('chunk_size', 128)
     EPOCHS = config.get('epochs', 300)
     NUM_LAYERS = config.get('num_layers', 8)
@@ -80,7 +82,7 @@ if __name__ == "__main__":
     train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
 
     start_epoch = 0
-    if LOAD_MODEL and os.path.exists(LOAD_MODEL):
+    if LOAD_MODEL:
         checkpoint = torch.load(LOAD_MODEL, map_location=device)
         hyperparams = checkpoint['hyperparameters']
         NUM_LAYERS = hyperparams['num_layers']
@@ -93,7 +95,7 @@ if __name__ == "__main__":
 
     model = GPT(NUM_LAYERS, NUM_HEADS, D_MODEL, tokenizer.vocabulary_length(), device=device)
 
-    if LOAD_MODEL and os.path.exists(LOAD_MODEL):
+    if LOAD_MODEL:
         model.load_state_dict(checkpoint['model_state_dict'])
 
     print(f"Parameters: {model.count_parameters()/1000000.0:.2f} M")
