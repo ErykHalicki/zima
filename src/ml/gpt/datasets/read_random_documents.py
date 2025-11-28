@@ -5,9 +5,9 @@ import random
 # Arguments
 # -------------
 
-TOPIC = "GPT-1"
+TOPIC = "WALL-E"
 DATASET_PATH = f"~/datasets/wikipedia_{TOPIC}_tokenized.hdf5"
-NUM_DOCUMENTS = 10
+NUM_DOCUMENTS = 100
 # -------------
 
 tokenizer = Tokenizer()
