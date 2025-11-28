@@ -6,6 +6,8 @@ import torch
 class TorchTextDataset(TextDataset, Dataset):
     def __init__(self, file_path, chunk_size=1024):
         super().__init__(file_path)
+        if self.unicode_vocabulary:
+            raise Exception("TorchTextDataset cannot load datasets with unicode_vocabulary mode enabled")
         self.document_name_list = self.get_document_name_list()
         self.document_count = len(self.document_name_list)
         self.documents = []

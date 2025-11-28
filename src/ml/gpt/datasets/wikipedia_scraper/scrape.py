@@ -4,11 +4,15 @@ from collections import deque
 import concurrent.futures
 import sys
 from tqdm import tqdm
+import numpy as np
 
 prefix = 'https://en.wikipedia.org/wiki/'
-max_workers = 100
+max_workers = 6
 
-def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar = True):
+def text_to_unicode_array(text):
+    return np.array([ord(c) for c in text], dtype=np.int32)
+
+def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar = True, dataset = None):
     '''
     start_link: string corresponding to wikipedia page title (not including wikipedia link)
     ex. start_link = "GPT-1" corresponds to the page https://en.wikipedia.org/wiki/GPT-1
@@ -24,6 +28,7 @@ def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar =
     current_page = start
     visited_page_dict = {}
     total_word_count = 0
+    saved_documents = set()
 
     def format_number(num):
         if num >= 1_000_000_000:
@@ -63,6 +68,14 @@ def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar =
                 pool.submit(pop_and_fetch_neighbors)
             pool.shutdown(wait=True)
 
+            if dataset is not None:
+                for page_link, page_node in visited_page_dict.items():
+                    if page_link in saved_documents:
+                        continue
+                    unicode_array = text_to_unicode_array(page_node.text)
+                    dataset.add_document(page_link, unicode_array)
+                    saved_documents.add(page_link)
+
     start.get_page_data()
     visited_page_dict[start.link] = start
     total_word_count += len(start.text.split())
@@ -70,6 +83,11 @@ def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar =
         pbar.n = len(visited_page_dict)
         pbar.set_postfix_str(f"{format_number(total_word_count)} words")
         pbar.refresh()
+
+    if dataset is not None:
+        unicode_array = text_to_unicode_array(start.text)
+        dataset.add_document(start.link, unicode_array)
+        saved_documents.add(start.link)
 
     while len(visited_page_dict) < max_pages:
         already_fetched_neighbors = {}

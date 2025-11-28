@@ -32,9 +32,7 @@ pip install -r requirements.txt
 
 if [ ! -f "~/datasets/wikipedia_WALL-E.hdf5" ]; then
     echo "Downloading dataset..."
-    # aws s3 cp s3://zima-data/datasets/wikipedia_Machine_learning.hdf5 ~/datasets/wikipedia_Machine_learning.hdf5
-    python -m datasets.collect_wikipedia_dataset
-    aws s3 cp "~/datasets/wikipedia_WALL-E.hdf5" "s3://zima-data/datasets/wikipedia_WALL-E.hdf5"
+    aws s3 cp "s3://zima-data/datasets/wikipedia_WALL-E.hdf5" "~/datasets/wikipedia_WALL-E.hdf5"
 else
     echo "Dataset already exists, skipping download"
 fi

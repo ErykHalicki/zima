@@ -12,22 +12,31 @@ class Tokenizer:
         self.vocabulary = {} # {token: index}
         self.inverse_vocabulary = {} # {index: token}
 
-    def calculate_vocabulary_from_text(self, text, max_vocabulary_size=None):
-        self.vocabulary.clear()
-
+    def get_token_frequency(self, text):
         token_freq = {}
         for char in text:
             token_freq[char] = token_freq.get(char, 0) + 1
+        return token_freq
 
+    def calculate_vocabulary_from_text(self, text, max_vocabulary_size=None):
+        self.vocabulary.clear()
+
+        token_freq = self.get_token_frequency(text)
         sorted_tokens = sorted(token_freq.items(), key=lambda x: x[1], reverse=True)
+
+        total_token_count = sum(freq for token, freq in sorted_tokens)
 
         if max_vocabulary_size is not None:
             max_regular_tokens = max_vocabulary_size - 3
             if max_regular_tokens < 0:
                 max_regular_tokens = 0
             vocabulary_list = [token for token, freq in sorted_tokens[:max_regular_tokens]]
+            excluded_tokens = sorted_tokens[max_regular_tokens:]
+            unknown_count = sum(freq for token, freq in excluded_tokens)
+            unknown_fraction = unknown_count / total_token_count if total_token_count > 0 else 0.0
         else:
             vocabulary_list = [token for token, freq in sorted_tokens]
+            unknown_fraction = 0.0
 
         vocabulary_list.sort(key=ord)
 
@@ -42,6 +51,8 @@ class Tokenizer:
         for index, key in enumerate(vocabulary_list):
             self.vocabulary[key] = index+start_index
             self.inverse_vocabulary[index+start_index] = key
+
+        return unknown_fraction
     
     def vocabulary_length(self):
         return len(self.vocabulary)
