@@ -126,6 +126,9 @@ if __name__ == "__main__":
 
     last_save_time = time.time()
 
+    causal_mask_cache = None
+    cached_seq_len = None
+
     for epoch in range(start_epoch, EPOCHS):
         model.train()
         progress_bar = tqdm(train_dataloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
@@ -135,10 +138,12 @@ if __name__ == "__main__":
                 batch_padding_masks = batch['masks'].to(device)
 
                 seq_len = batch_chunks.shape[1]
-                causal_mask = torch.tril(torch.ones(seq_len, seq_len)).unsqueeze(0).to(device)
+                if causal_mask_cache is None or cached_seq_len != seq_len:
+                    causal_mask_cache = torch.tril(torch.ones(seq_len, seq_len, device=device)).unsqueeze(0)
+                    cached_seq_len = seq_len
 
                 padding_mask = batch_padding_masks.unsqueeze(1)
-                combined_mask = causal_mask * padding_mask
+                combined_mask = causal_mask_cache * padding_mask
 
                 logits = model(batch_chunks, mask=combined_mask)
 
@@ -187,6 +192,7 @@ if __name__ == "__main__":
                     s3_checkpoint_path = os.path.join(S3_PATH, f'{MODEL_NAME}.pt')
                     upload_to_s3(local_checkpoint_path, s3_checkpoint_path)
 
+                del checkpoint
                 last_save_time = current_time
                 print(f"\nTime-based checkpoint saved at epoch {epoch+1}")
 
@@ -200,10 +206,12 @@ if __name__ == "__main__":
                     batch_padding_masks = batch['masks'].to(device)
 
                     seq_len = batch_chunks.shape[1]
-                    causal_mask = torch.tril(torch.ones(seq_len, seq_len)).unsqueeze(0).to(device)
+                    if causal_mask_cache is None or cached_seq_len != seq_len:
+                        causal_mask_cache = torch.tril(torch.ones(seq_len, seq_len, device=device)).unsqueeze(0)
+                        cached_seq_len = seq_len
 
                     padding_mask = batch_padding_masks.unsqueeze(1)
-                    combined_mask = causal_mask * padding_mask
+                    combined_mask = causal_mask_cache * padding_mask
 
                     logits = model(batch_chunks, mask=combined_mask)
 
@@ -245,4 +253,6 @@ if __name__ == "__main__":
             if SAVE_TO_S3 and S3_PATH:
                 s3_checkpoint_path = os.path.join(S3_PATH, f'{MODEL_NAME}.pt')
                 upload_to_s3(local_checkpoint_path, s3_checkpoint_path)
+
+            del checkpoint
 
