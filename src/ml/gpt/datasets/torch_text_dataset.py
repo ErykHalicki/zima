@@ -4,15 +4,28 @@ from .tokenizer import PAD_TOKEN_ID, END_TOKEN_ID
 import torch
 
 class TorchTextDataset(TextDataset, Dataset):
-    def __init__(self, file_path, chunk_size=1024): 
+    def __init__(self, file_path, chunk_size=1024):
         super().__init__(file_path)
         self.document_name_list = self.get_document_name_list()
         self.document_count = len(self.document_name_list)
         self.documents = []
         self.token_count = 0
+
         for doc in self.document_name_list:
-            self.documents.append(self.get_document(doc))
-            self.token_count+=self.documents[-1].shape[0]
+            try:
+                self.documents.append(self.get_document(doc))
+                self.token_count+=self.documents[-1].shape[0]
+            except TypeError:
+                print(f"Detected broken dataset structure, running repair_dataset()...")
+                self.repair_dataset()
+                self.document_name_list = self.get_document_name_list()
+                self.document_count = len(self.document_name_list)
+                self.documents = []
+                self.token_count = 0
+                for doc in self.document_name_list:
+                    self.documents.append(self.get_document(doc))
+                    self.token_count+=self.documents[-1].shape[0]
+                break
 
         self.chunk_size = chunk_size
         self.chunks = []
