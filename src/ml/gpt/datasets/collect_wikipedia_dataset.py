@@ -6,7 +6,7 @@ from .text_dataset import TextDataset
 # Arguments
 # -------------
 TOPIC = "WALL-E"
-PAGE_COUNT = 25000
+PAGE_COUNT = 75000
 DATASET_PATH = f"~/datasets/wikipedia_{TOPIC}_unicode.hdf5"
 # -------------
 

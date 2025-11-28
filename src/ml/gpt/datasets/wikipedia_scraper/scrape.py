@@ -75,6 +75,7 @@ def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar =
                     unicode_array = text_to_unicode_array(page_node.text)
                     dataset.add_document(page_link, unicode_array)
                     saved_documents.add(page_link)
+                    del page_node.text
 
     start.get_page_data()
     visited_page_dict[start.link] = start

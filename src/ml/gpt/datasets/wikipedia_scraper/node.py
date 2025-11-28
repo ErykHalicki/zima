@@ -47,7 +47,7 @@ class node:
 
     def get_page_data(self):
         self.page_data_fetched = True
-        if(len(self.neighbors) != 0 and self.text is not None):
+        if(len(self.neighbors) != 0 or self.text is not None):
             return False
         try:
             response = requests.get(WIKIPEDIA_PREFIX + self.link, headers=HEADER)
