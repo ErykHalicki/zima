@@ -1,5 +1,5 @@
-model_name: "GPT-1"
-dataset_path: "~/datasets/wikipedia_GPT-1.hdf5"
+model_name: "Machine_learning_GPT-1"
+dataset_path: "~/datasets/wikipedia_Machine_learning.hdf5"
 model_path: "~/model_weights/"
 # checkpoint_path: ~/model_weights/GPT-1.pt
 chunk_size: 128

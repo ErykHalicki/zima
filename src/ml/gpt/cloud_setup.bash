@@ -16,7 +16,7 @@ cd zima/src/ml/gpt
 
 mkdir ~/datasets
 mkdir ~/model_weights
-aws s3 cp s3://zima-data/datasets/wikipedia_Monkey.hdf5 ~/datasets/wikipedia_Monkey.hdf5
+aws s3 cp s3://zima-data/datasets/wikipedia_Machine_learning.hdf5 ~/datasets/wikipedia_Machine_learning.hdf5
 
 pip install -r requirements.txt
 
