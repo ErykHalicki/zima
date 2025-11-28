@@ -22,10 +22,12 @@ aws configure set default.region us-east-2
 if [ ! -d "zima" ]; then
     echo "Cloning zima repository..."
     git clone https://github.com/ErykHalicki/zima.git
+    cd zima/src/ml
 else
     echo "Zima repository already exists, skipping clone"
+    cd zima/src/ml
+    git pull
 fi
-cd zima/src/ml
 
 pip install -r gpt/requirements.txt
 

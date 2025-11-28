@@ -12,11 +12,13 @@ class TorchTextDataset(TextDataset, Dataset):
         self.document_count = len(self.document_name_list)
         self.documents = []
         self.token_count = 0
-
+        
         for doc in self.document_name_list:
             try:
                 self.documents.append(self.get_document(doc))
                 self.token_count+=self.documents[-1].shape[0]
+                if len(self.documents) % 1000 == 0:
+                    print(f"Got {len(self.documents)}/{len(self.document_name_list)} documents")
             except TypeError:
                 print(f"Detected broken dataset structure, running repair_dataset()...")
                 self.repair_dataset()

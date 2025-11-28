@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
     model = GPT(NUM_LAYERS, NUM_HEADS, D_MODEL, tokenizer.vocabulary_length(), device=device)
 
-    if LOAD_MODEL:
+    if LOAD_MODEL and os.path.exists(LOAD_MODEL):
         model.load_state_dict(checkpoint['model_state_dict'])
 
     print(f"Parameters: {model.count_parameters()/1000000.0:.2f} M")
