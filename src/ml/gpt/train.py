@@ -113,8 +113,6 @@ if __name__ == "__main__":
             scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         del checkpoint
 
-    print(tokenizer.untokenize(full_dataset[0]['chunks'].numpy()))
-
     model.train()
     for epoch in range(start_epoch, EPOCHS):
         progress_bar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
