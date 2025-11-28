@@ -75,6 +75,10 @@ if __name__ == "__main__":
     tokenizer = Tokenizer()
     tokenizer.vocabulary_from_numpy(full_dataset.get_vocabulary())
 
+    val_size = int(0.05 * len(full_dataset))
+    train_size = len(full_dataset) - val_size
+    train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
+
     start_epoch = 0
     if LOAD_MODEL:
         checkpoint = torch.load(LOAD_MODEL, map_location=device)
@@ -94,7 +98,8 @@ if __name__ == "__main__":
 
     print(f"Parameters: {model.count_parameters()/1000000.0:.2f} M")
 
-    dataloader = DataLoader(full_dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=NUM_WORKERS, persistent_workers=True if NUM_WORKERS > 0 else False)
+    train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=NUM_WORKERS, persistent_workers=True if NUM_WORKERS > 0 else False)
+    val_dataloader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True, num_workers=NUM_WORKERS, persistent_workers=True if NUM_WORKERS > 0 else False)
 
     loss_criterion = nn.CrossEntropyLoss(ignore_index=PAD_TOKEN_ID)
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
@@ -113,9 +118,9 @@ if __name__ == "__main__":
             scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         del checkpoint
 
-    model.train()
     for epoch in range(start_epoch, EPOCHS):
-        progress_bar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
+        model.train()
+        progress_bar = tqdm(train_dataloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
         for batch in progress_bar:
             with torch.amp.autocast(device.type):
                 batch_chunks = batch['chunks'].to(device)
@@ -146,6 +151,37 @@ if __name__ == "__main__":
             optimizer.zero_grad()
 
             progress_bar.set_postfix({'loss': f'{loss.item():.4f}', 'lr': f'{scheduler.get_last_lr()[0]:.6f}'})
+
+        model.eval()
+        val_loss = 0.0
+        num_val_batches = 0
+        with torch.no_grad():
+            for batch in val_dataloader:
+                with torch.amp.autocast(device.type):
+                    batch_chunks = batch['chunks'].to(device)
+                    batch_padding_masks = batch['masks'].to(device)
+
+                    seq_len = batch_chunks.shape[1]
+                    causal_mask = torch.tril(torch.ones(seq_len, seq_len)).unsqueeze(0).to(device)
+
+                    padding_mask = batch_padding_masks.unsqueeze(1)
+                    combined_mask = causal_mask * padding_mask
+
+                    logits = model(batch_chunks, mask=combined_mask)
+
+                    target_tokens = batch_chunks[:, 1:]
+                    logits = logits[:, :-1, :]
+
+                    batch_size, seq_len_minus_1, vocab_size = logits.shape
+                    logits_flat = logits.reshape(batch_size * seq_len_minus_1, vocab_size)
+                    targets_flat = target_tokens.reshape(batch_size * seq_len_minus_1)
+
+                    loss = loss_criterion(logits_flat, targets_flat)
+                    val_loss += loss.item()
+                    num_val_batches += 1
+
+        avg_val_loss = val_loss / num_val_batches
+        print(f"Epoch {epoch+1}/{EPOCHS} - Validation Loss: {avg_val_loss:.4f}")
 
         scheduler.step()
 

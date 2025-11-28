@@ -6,13 +6,11 @@ from .text_dataset import TextDataset
 
 # Arguments
 # -------------
-
-TOPIC = "Machine_learning"
-PAGE_COUNT = 5000
-MAX_VOCAB_SIZE = 150
+TOPIC = "WALL-E"
+PAGE_COUNT = 25000
+MAX_VOCAB_SIZE = 100
 VOCABULARY_MAX_CORPUS_LENGTH = 10_000_000
 DATASET_PATH = f"~/datasets/wikipedia_{TOPIC}.hdf5"
-
 # -------------
 
 dataset = TextDataset(DATASET_PATH)

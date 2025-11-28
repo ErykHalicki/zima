@@ -1,13 +1,14 @@
 from models.gpt import GPT
-from datasets.tokenizer import Tokenizer
+from datasets.tokenizer import Tokenizer, END_TOKEN_ID
 import torch
 import os
 
-MODEL_PATH = f"~/model_weights/GPT-1.pt"
+MODEL_PATH = f"~/model_weights/Machine_learning_GPT-1.pt"
+CONTEXT_WINDOW = 256
+TEMPERATURE = 1.0
+MAX_TEXT_LENGTH = 10000
 
-input = """
-Hello my name is 
-"""
+input = "Hey there! Whats your name?"
 
 device = torch.device("cpu")
 if torch.backends.mps.is_available():
@@ -37,9 +38,9 @@ print(f"Parameters: {gpt.count_parameters()/1000000.0:.2f} M")
 print(input, end='',flush=True)
 text = torch.from_numpy(tokenizer.tokenize(input))[:-1].to(device)
 
-for i in range(100):
-    context = text[-128:] if len(text) > 128 else text
-    index = gpt.inference(context, temperature=1.0)
+while len(text) < MAX_TEXT_LENGTH and END_TOKEN_ID not in text:
+    context = text[-CONTEXT_WINDOW:] if len(text) > CONTEXT_WINDOW else text
+    index = gpt.inference(context, temperature=TEMPERATURE)
     token_output = str(tokenizer.inverse_vocabulary[index])
     text = torch.cat([text, torch.tensor([index]).to(device)])
     print(token_output,end='',flush=True)

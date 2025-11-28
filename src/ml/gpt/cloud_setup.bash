@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+mkdir -p ~/datasets
+mkdir -p ~/model_weights
+
 apt-get update && apt-get install -y git unzip
 
 if [ ! -f /usr/local/bin/aws ]; then
@@ -25,17 +28,16 @@ else
 fi
 cd zima/src/ml/gpt
 
-mkdir -p ~/datasets
-mkdir -p ~/model_weights
+pip install -r requirements.txt
 
-if [ ! -f ~/datasets/wikipedia_Machine_learning.hdf5 ]; then
+if [ ! -f "~/datasets/wikipedia_WALL-E.hdf5" ]; then
     echo "Downloading dataset..."
-    aws s3 cp s3://zima-data/datasets/wikipedia_Machine_learning.hdf5 ~/datasets/wikipedia_Machine_learning.hdf5
+    # aws s3 cp s3://zima-data/datasets/wikipedia_Machine_learning.hdf5 ~/datasets/wikipedia_Machine_learning.hdf5
+    python -m datasets.collect_wikipedia_dataset
+    aws s3 cp "~/datasets/wikipedia_WALL-E.hdf5" "s3://zima-data/datasets/wikipedia_WALL-E.hdf5"
 else
     echo "Dataset already exists, skipping download"
 fi
-
-pip install -r requirements.txt
 
 python train.py --config configs/train_config.yaml
 

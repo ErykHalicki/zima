@@ -6,7 +6,7 @@ import sys
 from tqdm import tqdm
 
 prefix = 'https://en.wikipedia.org/wiki/'
-max_workers = 10
+max_workers = 100
 
 def scrape_wikipedia_topic(start_link: str, max_pages = 100, show_progress_bar = True):
     '''
