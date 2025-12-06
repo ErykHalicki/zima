@@ -26,7 +26,7 @@ def generate_launch_description():
     
     max_speed_arg = DeclareLaunchArgument(
         'max_speed',
-        default_value='255',
+        default_value='210',
         description='Maximum speed value (0-255)'
     )
     
