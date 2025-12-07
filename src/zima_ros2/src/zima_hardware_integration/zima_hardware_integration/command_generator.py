@@ -38,18 +38,21 @@ class CommandGeneratorNode(Node):
         
         self.get_logger().info('Command generator node initialized')
     
-    def joint_state_callback(self, msg):
+    def joint_state_callback(self, msg): #interface for arm controller
         """
         Convert JointState messages to hardware commands for servos.
-        This maintains backward compatibility with the original implementation.
+        expects all values to be in range 0-180 degrees
         """
-        if len(msg.position) < 5:
+        servo_indices = [0, 1, 3, 4, 5] #base, shoulder, elbow, hand, gripper 
+
+        if len(msg.position) < len(servo_indices):
             self.get_logger().error("JointState message has insufficient position data")
             return
-        
-        # Follow the original implementation logic: adding 90 degrees to each value
-        # and using indices 0, 1, 3, 4, 5
-        servo_indices = [0, 1, 3, 4, 5]
+
+        for position in msg.position:
+            if position > 180 or position < 0:
+                self.get_logger().error("JointState message has out of bounds position data")
+                return
         
         # Create and publish a command for each servo
         for i, servo_idx in enumerate(servo_indices):
@@ -57,11 +60,11 @@ class CommandGeneratorNode(Node):
                 command = HardwareCommand()
                 command.header = msg.header
                 command.subsystem = servo_idx  # Servo ID (0-7)
-                command.value = msg.position[i] + 90.0  # Add 90 degrees, microcontroller operates in range 0-180
+                command.value = msg.position[i]   
                 
                 self.hw_command_pub.publish(command)
     
-    def servo_command_callback(self, msg):
+    def servo_command_callback(self, msg): # only for manual testing of servos, do not use in arm controller
         """Convert ServoCommand messages to hardware commands."""
         if msg.servo_id > 7:
             self.get_logger().error(f"Invalid servo ID: {msg.servo_id}. Must be 0-7.")

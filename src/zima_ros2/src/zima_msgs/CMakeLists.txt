@@ -20,7 +20,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ServoPositions.msg"
   "msg/HardwareCommand.msg"
   "msg/HardwareStatus.msg"
-  "srv/SolveIK.srv"
+  "msg/ArmStateDelta.msg"
   DEPENDENCIES std_msgs geometry_msgs sensor_msgs
 )
 

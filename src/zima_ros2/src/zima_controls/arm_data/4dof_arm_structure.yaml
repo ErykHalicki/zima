@@ -1,0 +1,19 @@
+links:
+  - name: "base_to_shoulder"
+    length: 0.03
+    axis: [0.5, 0, 0.866]
+    bias: 0.0 
+  - name: "shoulder_to_elbow"
+    length: 0.10
+    axis: [0, 1, 0]
+    bias: 0.0 
+  - name: "elbow_to_wrist"
+    length: 0.12
+    axis: [0, 1, 0]
+    bias: 0.0 
+  - name: "wrist"
+    length: 0.01
+    axis: [1, 0, 0]
+    bias: 0.0 
+    
+

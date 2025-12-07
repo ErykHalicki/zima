@@ -1,144 +1,72 @@
-import rclpy
-from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
-
+import yaml
+import numpy as np
+from pathlib import Path
 from sensor_msgs.msg import JointState
-from geometry_msgs.msg import Pose
+from zima_msgs.msg import ArmStateDelta
+from zima_controls.ik_solver import IKSolver
+from rclpy.node import Node
 
-from zima_msgs.srv import SolveIK
-from zima_msgs.msg import GripperCommand
-from zima_msgs.msg import ServoCommand
+class ArmState:
+    def __init__(self, x=0.0, y=0.0, z=0.0, roll=0.0, pitch=0.0, yaw=0.0, gripper=0.0, denorm_coeffs=None):
+        self.x = x
+        self.y = y
+        self.z = z
+        self.roll = roll
+        self.pitch = pitch
+        self.yaw = yaw
+        self.gripper = gripper
+        self.denorm_coeffs = denorm_coeffs
 
+    def step(self, delta: ArmStateDelta):
+        self.x += delta.translation.x * self.denorm_coeffs['translation']
+        self.y += delta.translation.y * self.denorm_coeffs['translation']
+        self.z += delta.translation.z * self.denorm_coeffs['translation']
+        self.roll += delta.orientation.x * self.denorm_coeffs['rotation']
+        self.pitch += delta.orientation.y * self.denorm_coeffs['rotation']
+        self.yaw += delta.orientation.z * self.denorm_coeffs['rotation']
+        self.gripper += delta.gripper_state * self.denorm_coeffs['gripper']
+
+    def to_xyzrpy(self):
+        return np.array([self.x, self.y, self.z, self.roll, self.pitch, self.yaw])
 
 class ArmController(Node):
-    def __init__(self):
-        super().__init__('arm_controller')
-        
-        # QoS profile for reliable communication
-        qos_profile = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
-            history=HistoryPolicy.KEEP_LAST,
-            depth=10
-        )
-        
-        # Current servo positions subscriber
-        self.current_positions_sub = self.create_subscription(
-            JointState, 
-            '/current_servo_positions', 
-            self.current_positions_callback, 
-            qos_profile
-        )
-        
-        # Goal arm pose subscriber
-        self.goal_pose_sub = self.create_subscription(
-            Pose, 
-            '/goal_arm_pose', 
-            self.goal_pose_callback, 
-            qos_profile
-        )
+    def __init__(self, node_name):
+        super().__init__(node_name)
 
-        # Gripper Command subscriber
-        self.gripper_command_sub = self.create_subscription(
-            GripperCommand, 
-            '/gripper_command', 
-            self.gripper_command_callback, 
-            qos_profile
-        )
-        
-        # IK solver service client
-        self.ik_client = self.create_client(SolveIK, 'solve_inverse_kinematics')
-        
-        # Goal joint state publisher
-        self.goal_joint_state_pub = self.create_publisher(
-            JointState, 
-            '/goal_joint_state', 
-            qos_profile
-        )
+        self.declare_parameter('initial_arm_state', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        self.declare_parameter('denorm_config_path', '')
+        self.declare_parameter('arm_structure_path', '')
 
-        self.servo_command_pub = self.create_publisher(
-            ServoCommand,
-            '/servo_command',
+        initial_state = self.get_parameter('initial_arm_state').value
+        denorm_path = self.get_parameter('denorm_config_path').value
+        arm_structure_path = self.get_parameter('arm_structure_path').value
+
+        with open(denorm_path, 'r') as f:
+            denorm_data = yaml.safe_load(f)
+        denorm_coeffs = denorm_data['coefficients']
+
+        self.arm_state = ArmState(*initial_state, gripper=0.0, denorm_coeffs=denorm_coeffs)
+
+        self.ik_solver = IKSolver(arm_structure_path)
+
+        self.delta_sub = self.create_subscription(
+            ArmStateDelta,
+            'arm_state_delta',
+            self.delta_callback,
             10
         )
-        
-        # Store current servo positions
-        self.current_positions = None
-        self.client_futures = []
-        
-        self.get_logger().info('Arm Controller node initialized')
-    
-    def current_positions_callback(self, msg):
-        """Update current servo positions"""
-        self.current_positions = msg
-    
-    def gripper_command_callback(self, msg):
-        servo_msg1 = ServoCommand()
-        servo_msg2 = ServoCommand()
-        servo_msg1.servo_id = 6
-        servo_msg2.servo_id = 7
-        if not msg.open:
-            servo_msg1.position = msg.width * 5 + 10.0 #narrow
-            servo_msg2.position = msg.width * 5 + 10.0 #narrow
-        else:
-            servo_msg1.position = msg.width * 10 + 90.0 #wide
-            servo_msg2.position = msg.width * 10 + 90.0 #wide
-        self.servo_command_pub.publish(servo_msg1)
-        self.servo_command_pub.publish(servo_msg2)
-    
-    def goal_pose_callback(self, goal_pose):
-        """Solve IK for the goal pose and publish goal joint states"""
-        # Wait for IK service to be available
-        if not self.ik_client.wait_for_service(timeout_sec=5.0):
-            self.get_logger().error('IK service not available')
-            return
-        
-        # Prepare IK service request
-        request = SolveIK.Request()
-        request.target_pose = goal_pose
-        
-        # Use current positions as initial guess if available
-        if self.current_positions:
-            request.initial_guess.position = self.current_positions.position
-        
-        # Call IK service
-        #self.get_logger().info(f'{request}')
-        self.client_futures.append(self.ik_client.call_async(request))
 
-    def send_goal_joint_state(self, response):
-        try:
-            if response.success:
-                # Create goal joint state message
-                goal_joint_state = JointState()
-                goal_joint_state.position = [float(pos) for pos in response.solution.position]
-                goal_joint_state.header.stamp = self.get_clock().now().to_msg()
-                
-                # Publish goal joint states
-                self.goal_joint_state_pub.publish(goal_joint_state)
-                self.get_logger().info(f'Published goal joint states: {goal_joint_state.position}')
-            else:
-                self.get_logger().warning('IK solver failed to find a solution')
-        
-        except Exception as e:
-            self.get_logger().error(f'Error processing IK solution: {str(e)}')
+        self.joint_state_pub = self.create_publisher(JointState, 'joint_states', 10)
 
-    def spin(self):
-        while rclpy.ok():
-            rclpy.spin_once(self)
-            incomplete_futures = []
-            for f in self.client_futures:
-                if f.done():
-                    res = f.result()
-                    self.send_goal_joint_state(res)
-                else:
-                    incomplete_futures.append(f)
-            self.client_futures = incomplete_futures
+    def delta_callback(self, msg: ArmStateDelta):
+        self.arm_state.step(msg)
 
-def main(args=None):
-    rclpy.init(args=args)
-    arm_controller = ArmController()
-    arm_controller.spin()
-    rclpy.shutdown()
+        xyzrpy = self.arm_state.to_xyzrpy()
+        joint_angles = list(self.ik_solver.solve(xyzrpy)) + [self.arm_state.gripper]
 
+        joint_state = JointState()
+        joint_state.header.stamp = self.get_clock().now().to_msg()
+        joint_state.name = ['base', 'shoulder', 'elbow', 'wrist', 'gripper']
+        joint_state.position = joint_angles
 
-if __name__ == '__main__':
-    main()
+        self.joint_state_pub.publish(joint_state)
