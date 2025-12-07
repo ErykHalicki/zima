@@ -22,14 +22,23 @@ def generate_launch_description():
         )
     )
 
+    joy_control_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(zima_hardware_integration_dir, 'launch', 'joy_control.py')
+        )
+    )
+
     teleop_controller_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(zima_ml_dir, 'launch', 'teleop_controller.launch.py')
         )
     )
 
+    
+
     return LaunchDescription([
         arm_control_launch,
         hardware_interface_launch,
+        joy_control_launch,
         teleop_controller_launch
     ])
