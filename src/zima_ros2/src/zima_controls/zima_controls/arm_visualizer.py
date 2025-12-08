@@ -35,52 +35,111 @@ def visualize_arm(arms):
     plt.show()
 
 
-def visualize_interactive(solver, initial_joints=None):
-    if initial_joints is None:
-        initial_joints = [0.0] * len(solver.revolute_links)
+def visualize_interactive(solver, initial_joints=None, joint_mode=False):
+    if joint_mode:
+        if initial_joints is None:
+            initial_joints = [0.0] * len(solver.revolute_links)
 
-    fig = plt.figure(figsize=(12, 8))
-    ax = fig.add_subplot(111, projection='3d')
-    plt.subplots_adjust(bottom=0.25)
+        fig = plt.figure(figsize=(12, 8))
+        ax = fig.add_subplot(111, projection='3d')
+        plt.subplots_adjust(bottom=0.25)
 
-    def update_arm(joints):
-        ax.clear()
-        transforms = solver.forward(joints)
-        points = np.array([t[:3, 3] for t in transforms])
+        def update_arm(joints):
+            ax.clear()
+            transforms = solver.forward(joints)
+            points = np.array([t[:3, 3] for t in transforms])
 
-        xs = points[:, 0]
-        ys = points[:, 1]
-        zs = points[:, 2]
+            xs = points[:, 0]
+            ys = points[:, 1]
+            zs = points[:, 2]
 
-        ax.plot(xs, ys, zs, 'o-', linewidth=2, markersize=8)
-        ax.scatter(xs[0], ys[0], zs[0], c='green', s=100, label='Base')
-        ax.scatter(xs[-1], ys[-1], zs[-1], c='red', s=100, label='End Effector')
+            ax.plot(xs, ys, zs, 'o-', linewidth=2, markersize=8)
+            ax.scatter(xs[0], ys[0], zs[0], c='green', s=100, label='Base')
+            ax.scatter(xs[-1], ys[-1], zs[-1], c='red', s=100, label='End Effector')
 
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-        ax.legend()
-        ax.set_title(f'End Effector: ({xs[-1]:.3f}, {ys[-1]:.3f}, {zs[-1]:.3f})')
+            ax.set_xlabel('X')
+            ax.set_ylabel('Y')
+            ax.set_zlabel('Z')
+            ax.legend()
+            ax.set_title(f'End Effector: ({xs[-1]:.3f}, {ys[-1]:.3f}, {zs[-1]:.3f})')
 
-        max_range = 0.2
-        ax.set_xlim([-max_range, max_range])
-        ax.set_ylim([-max_range, max_range])
-        ax.set_zlim([-max_range, max_range])
+            max_range = 0.2
+            ax.set_xlim([-max_range, max_range])
+            ax.set_ylim([-max_range, max_range])
+            ax.set_zlim([-max_range, max_range])
 
-        fig.canvas.draw_idle()
+            fig.canvas.draw_idle()
 
-    sliders = []
-    for i in range(len(solver.revolute_links)):
-        ax_slider = plt.axes([0.1, 0.15 - i*0.03, 0.8, 0.02])
-        slider = Slider(ax_slider, f'Joint {i+1}', -np.pi, np.pi, valinit=initial_joints[i])
-        sliders.append(slider)
+        sliders = []
+        for i in range(len(solver.revolute_links)):
+            ax_slider = plt.axes([0.1, 0.15 - i*0.03, 0.8, 0.02])
+            slider = Slider(ax_slider, f'Joint {i+1}', -np.pi, np.pi, valinit=initial_joints[i])
+            sliders.append(slider)
 
-    def update(val):
-        joints = [s.val for s in sliders]
-        update_arm(joints)
+        def update(val):
+            joints = [s.val for s in sliders]
+            update_arm(joints)
 
-    for slider in sliders:
-        slider.on_changed(update)
+        for slider in sliders:
+            slider.on_changed(update)
 
-    update_arm(initial_joints)
-    plt.show()
+        update_arm(initial_joints)
+        plt.show()
+
+    else:
+        initial_pose = [0.0, 0.0, 0.1, 0.0, 0.0, 0.0]
+
+        fig = plt.figure(figsize=(12, 8))
+        ax = fig.add_subplot(111, projection='3d')
+        plt.subplots_adjust(bottom=0.35)
+
+        def update_arm_ik(pose):
+            ax.clear()
+            joints, error = solver.solve(np.array(pose[:3]), np.array(pose[3:]))
+            if joints is not None:
+                transforms = solver.forward(joints)
+                points = np.array([t[:3, 3] for t in transforms])
+
+                xs = points[:, 0]
+                ys = points[:, 1]
+                zs = points[:, 2]
+
+                ax.plot(xs, ys, zs, 'o-', linewidth=2, markersize=8)
+                ax.scatter(xs[0], ys[0], zs[0], c='green', s=100, label='Base')
+                ax.scatter(xs[-1], ys[-1], zs[-1], c='red', s=100, label='End Effector')
+                ax.scatter(pose[0], pose[1], pose[2], c='blue', s=100, marker='x', label='Target')
+
+                ax.set_xlabel('X')
+                ax.set_ylabel('Y')
+                ax.set_zlabel('Z')
+                ax.legend()
+                ax.set_title(f'Target: ({pose[0]:.3f}, {pose[1]:.3f}, {pose[2]:.3f}) | Error: {error:.6f}')
+            else:
+                ax.scatter(pose[0], pose[1], pose[2], c='blue', s=100, marker='x', label='Target')
+                ax.set_title('IK Solution Not Found')
+
+            max_range = 0.2
+            ax.set_xlim([-max_range, max_range])
+            ax.set_ylim([-max_range, max_range])
+            ax.set_zlim([-max_range, max_range])
+
+            fig.canvas.draw_idle()
+
+        sliders = []
+        slider_labels = ['X', 'Y', 'Z', 'Roll', 'Pitch', 'Yaw']
+        slider_ranges = [(0.0, 0.30), (-0.2, 0.2), (-0.2, 0.2), (-np.pi, np.pi), (-np.pi, np.pi), (-np.pi, np.pi)]
+
+        for i in range(6):
+            ax_slider = plt.axes([0.1, 0.25 - i*0.04, 0.8, 0.02])
+            slider = Slider(ax_slider, slider_labels[i], slider_ranges[i][0], slider_ranges[i][1], valinit=initial_pose[i])
+            sliders.append(slider)
+
+        def update(val):
+            pose = [s.val for s in sliders]
+            update_arm_ik(pose)
+
+        for slider in sliders:
+            slider.on_changed(update)
+
+        update_arm_ik(initial_pose)
+        plt.show()

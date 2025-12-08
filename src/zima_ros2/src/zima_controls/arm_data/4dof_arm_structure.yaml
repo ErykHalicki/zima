@@ -23,19 +23,19 @@ links:
 
   - name: "elbow_to_wrist"
     type: "revolute"
-    translation: [0.10,-0.01,0]
+    translation: [0.10,-0.02,0]
     axis: [0, 1, 0]
     bias: 0.0 
 
   - name: "wrist"
-    type: "revolute"
-    translation: [0.12,0.025,0]
+    type: "fixed"
+    translation: [0.12,-0.02,0]
     axis: [1, 0, 0]
     bias: 0.0 
   
   - name: "gripper"
     type: "fixed"
-    translation: [0,0.04,0]
+    translation: [0.05,0.0,0]
     axis: [1, 0, 0]
     bias: 0.0
 
