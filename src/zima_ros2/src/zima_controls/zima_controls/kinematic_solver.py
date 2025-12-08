@@ -1,13 +1,20 @@
 import numpy as np
 import yaml
 from scipy.spatial.transform import Rotation
+from scipy.spatial import KDTree
+import math
+import time
 
 class KinematicSolver:
-    def __init__(self, arm_structure_yaml_path):
+    def __init__(self, arm_structure_yaml_path, fk_sample_count = 20000):
         with open(arm_structure_yaml_path, 'r') as f:
             structure_data = yaml.safe_load(f)
         self.links = structure_data['links']
         self.revolute_links = [link for link in self.links if link['type']=='revolute']
+        self.orientation_weight = 0.1
+        self.translation_weight = 1.0
+        self.kd_precision = 2
+        self.kd_tree, self.joint_LUT = self.create_kd_tree(fk_sample_count)
         
     def forward(self,joints):
         if len(joints) != len(self.revolute_links):
@@ -28,24 +35,56 @@ class KinematicSolver:
             T.append(T[-1]@T_link)
         return T
 
-    def solve(self,xyz,rpy):
-        # on solve() call take in xyzrpy in meters and radians
-        # use pre calculated pinv to get joint state output
-        # add biases to joint states
-        # return joint state in radians
-        pass
-    
+    def solve(self,xyz, rpy):
+        '''
+        xyz: numpy array of desired xyz
+        rpy: numpy array of desired roll pitch yaw
+        '''
+        weighted_xyzrpy = np.concatenate((xyz*self.translation_weight, rpy*self.orientation_weight))
+        _, best_point_index = self.kd_tree.query(weighted_xyzrpy)
+        print(best_point_index)
+        closest_xyzrpy = self.kd_tree.data[best_point_index]
+        print(self.joint_LUT[tuple(closest_xyzrpy)])
 
-    def matrix_to_euler(matrix):
-        R = matrix[0:3, 0:3]
+    def create_kd_tree(self, k):
+        '''
+        k: number of points to randomly sample
+        returns: kd_tree, LUT mapping weighted xyzrpy points to joint angles
+        '''
+        random_gen_start = time.time()
+        gen = np.random.default_rng()
+        random_samples = gen.random((k,len(self.revolute_links)))*math.pi 
+        # random_samples is (k, d) matrix where each row is a set of randomly sampled joint states
+        print(f"random gen took {time.time() - random_gen_start}")
+    
+        joint_LUT = {} # {(x,y,z,r,p,y): [joint0, joint1, ...]}
+        kd_tree_data = np.empty((k,6)) #xyzrpy is 6dof 
+        
+        fk_start = time.time()
+        for i, sample in enumerate(random_samples):
+            T = self.forward(sample)[-1]
+            weighted_eulers = self.transformation_matrix_to_euler(T) * self.orientation_weight
+            weighted_translation = self.transformation_matrix_to_translation(T) * self.translation_weight
+            weighted_xyzrpy = np.round(np.concatenate((weighted_translation, weighted_eulers)), self.kd_precision)
+            joint_LUT[tuple(weighted_xyzrpy)] = sample
+            kd_tree_data[i] = weighted_xyzrpy
+        print(f"fk sampling took {time.time() - fk_start}")
+        
+        kd_start = time.time()
+        kd_tree = KDTree(kd_tree_data)
+        print(f"kd_tree generation took {time.time() - kd_start}")
+        return kd_tree, joint_LUT
+
+    def transformation_matrix_to_euler(self, matrix):
+        R = matrix[:3, :3]
         r = Rotation.from_matrix(R)
         return r.as_euler('xyz', degrees=False)
 
+    def transformation_matrix_to_translation(self, matrix):
+        return matrix[:3,3]
 
 if __name__ == '__main__':
-    from arm_visualizer import visualize_interactive
-
-    yaml_path = "/Users/erykhalicki/Documents/projects/current/zima/src/zima_ros2/src/zima_controls/arm_data/4dof_arm_structure.yaml"
+    yaml_path = "/home/eryk/Documents/projects/zima/src/zima_ros2/src/zima_controls/arm_data/4dof_arm_structure.yaml"
     solver = KinematicSolver(yaml_path)
-    visualize_interactive(solver)
+    solver.solve(np.array([0.1,0.1,0.1]), np.array([0,math.pi/2,0]))
     
