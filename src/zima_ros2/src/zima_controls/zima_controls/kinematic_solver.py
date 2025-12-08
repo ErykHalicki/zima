@@ -6,14 +6,14 @@ import math
 import time
 
 class KinematicSolver:
-    def __init__(self, arm_structure_yaml_path, fk_sample_count = 20000):
+    def __init__(self, arm_structure_yaml_path, fk_sample_count = 1000):
         with open(arm_structure_yaml_path, 'r') as f:
             structure_data = yaml.safe_load(f)
         self.links = structure_data['links']
         self.revolute_links = [link for link in self.links if link['type']=='revolute']
         self.orientation_weight = 0.1
         self.translation_weight = 1.0
-        self.kd_precision = 2
+        self.kd_precision = 4
         self.kd_tree, self.joint_LUT = self.create_kd_tree(fk_sample_count)
         
     def forward(self,joints):
@@ -41,10 +41,9 @@ class KinematicSolver:
         rpy: numpy array of desired roll pitch yaw
         '''
         weighted_xyzrpy = np.concatenate((xyz*self.translation_weight, rpy*self.orientation_weight))
-        _, best_point_index = self.kd_tree.query(weighted_xyzrpy)
-        print(best_point_index)
+        error, best_point_index = self.kd_tree.query(weighted_xyzrpy)
         closest_xyzrpy = self.kd_tree.data[best_point_index]
-        print(self.joint_LUT[tuple(closest_xyzrpy)])
+        return self.joint_LUT[tuple(closest_xyzrpy)], error
 
     def create_kd_tree(self, k):
         '''
@@ -55,7 +54,7 @@ class KinematicSolver:
         gen = np.random.default_rng()
         random_samples = gen.random((k,len(self.revolute_links)))*math.pi 
         # random_samples is (k, d) matrix where each row is a set of randomly sampled joint states
-        print(f"random gen took {time.time() - random_gen_start}")
+        #print(f"random gen took {time.time() - random_gen_start}")
     
         joint_LUT = {} # {(x,y,z,r,p,y): [joint0, joint1, ...]}
         kd_tree_data = np.empty((k,6)) #xyzrpy is 6dof 
@@ -68,11 +67,11 @@ class KinematicSolver:
             weighted_xyzrpy = np.round(np.concatenate((weighted_translation, weighted_eulers)), self.kd_precision)
             joint_LUT[tuple(weighted_xyzrpy)] = sample
             kd_tree_data[i] = weighted_xyzrpy
-        print(f"fk sampling took {time.time() - fk_start}")
+        #print(f"fk sampling took {time.time() - fk_start}")
         
         kd_start = time.time()
         kd_tree = KDTree(kd_tree_data)
-        print(f"kd_tree generation took {time.time() - kd_start}")
+        #print(f"kd_tree generation took {time.time() - kd_start}")
         return kd_tree, joint_LUT
 
     def transformation_matrix_to_euler(self, matrix):
@@ -81,10 +80,26 @@ class KinematicSolver:
         return r.as_euler('xyz', degrees=False)
 
     def transformation_matrix_to_translation(self, matrix):
-        return matrix[:3,3]
+        return np.array(matrix[:3,3])
 
 if __name__ == '__main__':
+    from arm_visualizer import visualize_arm
     yaml_path = "/home/eryk/Documents/projects/zima/src/zima_ros2/src/zima_controls/arm_data/4dof_arm_structure.yaml"
-    solver = KinematicSolver(yaml_path)
-    solver.solve(np.array([0.1,0.1,0.1]), np.array([0,math.pi/2,0]))
+
+    num_arms = 20
+    k=10000
+    gen = np.random.default_rng()
+
+    solver = KinematicSolver(yaml_path, k)
+    random_samples = gen.random((num_arms,4))*math.pi
+    errors = []
+    for true_joint_angles in random_samples:
+        true_transformations = solver.forward(true_joint_angles)
+        true_joint_positions = [solver.transformation_matrix_to_translation(T) for T in true_transformations]
+        true_end_xyz = solver.transformation_matrix_to_translation(true_transformations[-1])
+        true_end_rpy = solver.transformation_matrix_to_euler(true_transformations[-1])
+
+        ik_joint_angles, ik_error = solver.solve(true_end_xyz, true_end_rpy)
+        ik_joint_positions = [solver.transformation_matrix_to_translation(T) for T in solver.forward(ik_joint_angles)]
+        visualize_arm([true_joint_positions, ik_joint_positions])
     

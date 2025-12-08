@@ -4,18 +4,27 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.widgets import Slider
 
 
-def visualize_arm(points):
+def visualize_arm(arms):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    points = np.array(points)
-    xs = points[:, 0]
-    ys = points[:, 1]
-    zs = points[:, 2]
+    colors = plt.cm.tab10(np.linspace(0, 1, len(arms)))
 
-    ax.plot(xs, ys, zs, 'o-', linewidth=2, markersize=8)
-    ax.scatter(xs[0], ys[0], zs[0], c='green', s=100, label='Base')
-    ax.scatter(xs[-1], ys[-1], zs[-1], c='red', s=100, label='End Effector')
+    for i, arm_joints in enumerate(arms):
+        points = np.array(arm_joints)
+        xs = points[:, 0]
+        ys = points[:, 1]
+        zs = points[:, 2]
+
+        color = colors[i]
+        ax.plot(xs, ys, zs, 'o-', linewidth=2, markersize=8, color=color, label=f'Arm {i+1}')
+        ax.scatter(xs[0], ys[0], zs[0], c='green', s=100)
+        ax.scatter(xs[-1], ys[-1], zs[-1], c='red', s=100, edgecolors=color, linewidths=2)
+
+    max_range = 0.2
+    ax.set_xlim([-max_range/2, max_range])
+    ax.set_ylim([-max_range, max_range])
+    ax.set_zlim([-max_range/2, max_range])
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
