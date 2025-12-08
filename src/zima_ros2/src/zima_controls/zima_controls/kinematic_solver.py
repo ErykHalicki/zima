@@ -2,7 +2,7 @@ import numpy as np
 import yaml
 from scipy.spatial.transform import Rotation
 
-class IKSolver:
+class KinematicSolver:
     def __init__(self, arm_structure_yaml_path):
         with open(arm_structure_yaml_path, 'r') as f:
             structure_data = yaml.safe_load(f)
@@ -29,6 +29,10 @@ class IKSolver:
         return T
 
     def solve(self,xyz,rpy):
+        # on solve() call take in xyzrpy in meters and radians
+        # use pre calculated pinv to get joint state output
+        # add biases to joint states
+        # return joint state in radians
         pass
     
 
@@ -37,15 +41,11 @@ class IKSolver:
         r = Rotation.from_matrix(R)
         return r.as_euler('xyz', degrees=False)
 
-# on solve() call take in xyzrpy in meters and radians
-# use pre calculated pinv to get joint state output
-# add biases to joint states
-# return joint state in radians
 
 if __name__ == '__main__':
     from arm_visualizer import visualize_interactive
 
     yaml_path = "/Users/erykhalicki/Documents/projects/current/zima/src/zima_ros2/src/zima_controls/arm_data/4dof_arm_structure.yaml"
-    solver = IKSolver(yaml_path)
+    solver = KinematicSolver(yaml_path)
     visualize_interactive(solver)
     
