@@ -19,6 +19,7 @@ class KinematicSolver:
         self.translation_weight = 1.0
         self.kd_precision = 4
         self.kd_tree, self.joint_LUT = self.create_kd_tree(fk_sample_count)
+        self.max_reach = sum([np.linalg.norm(link['translation']) for link in self.links])
         
     def forward(self,joints):
         if len(joints) != len(self.revolute_links):
@@ -50,7 +51,7 @@ class KinematicSolver:
 
     def estimate_jacobian(self, joint_state, target_xyz, target_rpy, h=np.radians(2)): # default of 2 degrees
         jacobian = np.empty((6,len(joint_state)))
-        for i in len(joint_state):
+        for i in range(len(joint_state)):
             joint_state_plus = joint_state.copy()
             joint_state_minus = joint_state.copy()
             joint_state_plus[i] += h
@@ -60,7 +61,7 @@ class KinematicSolver:
             jacobian[:,i] = (plus_h_error - minus_h_error) / 2*h # ith column corresponds to the ith joints partial derivatives of error
         return jacobian
 
-    def solve(self, xyz, rpy=[0,0,0], current_joint_state = None, eps=0.005, max_iters=100, step_size=0.1):
+    def solve(self, xyz, rpy=[0,0,0], current_joint_state = None, eps=0.001, max_iters=10, step_size=0.001):
         '''
         xyz: numpy array of desired xyz
         rpy: numpy array of desired roll pitch yaw
@@ -68,22 +69,27 @@ class KinematicSolver:
         if current_joint_state is not None and len(current_joint_state) != len(self.revolute_links):
             raise Exception(f"Cannot solve for more than {len(self.revolute_links)} joint states!")
         weighted_xyzrpy = np.concatenate((xyz*self.translation_weight, rpy*self.orientation_weight))
-        error, best_point_index = self.kd_tree.query(weighted_xyzrpy)
+        warm_start_error, best_point_index = self.kd_tree.query(weighted_xyzrpy)
         closest_xyzrpy = self.kd_tree.data[best_point_index]
 
         joint_state_warm_start = self.joint_LUT[tuple(closest_xyzrpy)]
         
         i=0
-        best_estimate = joint_state_warm_start
-        best_error = math.inf
+        estimate = np.array(joint_state_warm_start)
+        current_error = warm_start_error
         while i < max_iters:
-            last_error = best_error
-
-            if last_error == best_error:
-                break # no improvement 
-            if best_error <= eps:
+            current_error = self.calculate_joint_state_error(estimate,xyz,rpy)
+            if np.linalg.norm(current_error) <= eps:
+                #print(f"solved with {i} iterations")
                 break # solution is good enough
-        return 
+            jacobian = self.estimate_jacobian(estimate, xyz,rpy)
+            estimate += step_size * np.linalg.pinv(jacobian) @ -current_error
+            i+=1
+        else:
+            #print(f"unsolved after {i} iterations")
+            pass
+
+        return estimate, np.linalg.norm(current_error)
 
     def create_kd_tree(self, k):
         '''
@@ -128,7 +134,7 @@ if __name__ == '__main__':
     from arm_visualizer import visualize_arm, visualize_interactive
     yaml_path = "/home/eryk/Documents/projects/zima/src/zima_ros2/src/zima_controls/arm_data/4dof_arm_structure.yaml"
 
-    k=15_000
+    k=10000
     solver = KinematicSolver(yaml_path, k, [1,1,1,0,0,0])
     
     '''

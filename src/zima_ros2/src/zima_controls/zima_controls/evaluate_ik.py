@@ -7,7 +7,7 @@ yaml_path = "/home/eryk/Documents/projects/zima/src/zima_ros2/src/zima_controls/
 
 num_arms = 1000
 gen = np.random.default_rng()
-ks = [100, 1000,5000,10000,20000,50000]
+ks = [100,500, 1000,2000,5000,10000,20000]
 ks_errors = []
 
 for k in ks:
