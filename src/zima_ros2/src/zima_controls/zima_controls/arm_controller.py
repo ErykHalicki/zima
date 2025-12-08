@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 from sensor_msgs.msg import JointState
 from zima_msgs.msg import ArmStateDelta
-from zima_controls.ik_solver import IKSolver
+from zima_controls.kinematic_solver import KinematicSolver
 from rclpy.node import Node
 
 class ArmState:
@@ -33,7 +33,7 @@ class ArmController(Node):
     def __init__(self, node_name):
         super().__init__(node_name)
 
-        self.declare_parameter('initial_arm_state', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        self.declare_parameter('initial_arm_state', [0.2, 0.0, 0.0, 0.0, 0.0, 0.0])
         self.declare_parameter('denorm_config_path', '')
         self.declare_parameter('arm_structure_path', '')
 
@@ -47,7 +47,7 @@ class ArmController(Node):
 
         self.arm_state = ArmState(*initial_state, gripper=0.0, denorm_coeffs=denorm_coeffs)
 
-        self.ik_solver = IKSolver(arm_structure_path)
+        self.ik_solver = KinematicSolver(arm_structure_path, dimension_mask=[1,1,1,1,0,0])
 
         self.delta_sub = self.create_subscription(
             ArmStateDelta,

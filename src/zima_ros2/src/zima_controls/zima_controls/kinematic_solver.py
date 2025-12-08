@@ -6,7 +6,7 @@ import math
 import time
 
 class KinematicSolver:
-    def __init__(self, arm_structure_yaml_path, fk_sample_count = 20000, dimension_mask=[1]*6):
+    def __init__(self, arm_structure_yaml_path, fk_sample_count = 10000, dimension_mask=[1]*6):
         '''
         dimension_mask (xyzrpy): specifies which dimensions to optimize against during inverse kin solving
         '''
@@ -15,7 +15,7 @@ class KinematicSolver:
         self.dimension_mask = dimension_mask
         self.links = structure_data['links']
         self.revolute_links = [link for link in self.links if link['type']=='revolute']
-        self.orientation_weight = 0.05
+        self.orientation_weight = 0.1
         self.translation_weight = 1.0
         self.kd_precision = 4
         self.kd_tree, self.joint_LUT = self.create_kd_tree(fk_sample_count)
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     yaml_path = "/home/eryk/Documents/projects/zima/src/zima_ros2/src/zima_controls/arm_data/4dof_arm_structure.yaml"
 
     k=10000
-    solver = KinematicSolver(yaml_path, k, [1,1,1,0,0,0])
+    solver = KinematicSolver(yaml_path, k, [1,1,1,1,0,0])
     
     '''
     num_arms = 20
