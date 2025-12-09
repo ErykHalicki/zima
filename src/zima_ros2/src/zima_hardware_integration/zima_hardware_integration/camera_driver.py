@@ -5,6 +5,8 @@ from sensor_msgs.msg import CompressedImage
 import cv2
 import threading
 import subprocess
+import sys
+import os
 
 class CameraPublisher(Node):
     def __init__(self):
@@ -60,13 +62,20 @@ class CameraPublisher(Node):
         self.timer = self.create_timer(1./actual_fps, self.publish_frame)
     
     def capture_loop(self):
-        """Dedicated thread for capturing frames as fast as possible"""
+        stderr_backup = os.dup(2)
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, 2)
+        os.close(devnull)
+
         while self.running and rclpy.ok():
             ret, frame = self.cap.read()
-            
+
             if ret:
                 with self.frame_lock:
                     self.latest_frame = frame
+
+        os.dup2(stderr_backup, 2)
+        os.close(stderr_backup)
     
     def downscale_image(self, frame):
         if self.output_size is not None:

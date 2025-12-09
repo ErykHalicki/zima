@@ -120,12 +120,7 @@ class JoyControlNode(Node):
         )
         
         # For status messages, we can avoid spamming the log
-        self.timer = self.create_timer(5.0, self.status_timer_callback)
         self.get_logger().info('Joy control node initialized')
-        
-    def status_timer_callback(self):
-        """Periodic status message"""
-        self.get_logger().info(f'Joy control active. Current mode: {self.control_mode}')
         
     def joy_callback(self, msg):
         """Process joystick inputs and generate commands"""

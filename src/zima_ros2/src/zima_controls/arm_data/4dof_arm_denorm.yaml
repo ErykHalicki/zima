@@ -1,0 +1,14 @@
+coefficients:
+  gripper: 0.1 # max +- 0.2 rad in one time step
+  translation: 0.01 # max +- 0.5cm per time step
+  rotation: 0.1 # max +- 0.1 rad in one time step
+limits:
+  gripper:
+    max: 1.35
+    min: 0
+  translation:
+    max: 0.3
+    min: -0.3
+  rotation: 
+    max: 1.5707
+    min: -1.5707

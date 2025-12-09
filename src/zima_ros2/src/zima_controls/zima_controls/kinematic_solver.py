@@ -90,7 +90,7 @@ class KinematicSolver:
             jacobian[:,i] = (plus_h_error - minus_h_error) / 2*h # ith column corresponds to the ith joints partial derivatives of error
         return jacobian
 
-    def solve(self, xyz, rpy=[0,0,0], current_joint_state = None, eps=0.001, max_iters=40, step_size=0.0005):
+    def solve(self, xyz, rpy=[0,0,0], current_joint_state = None, eps=0.005, max_iters=15, step_size=0.0005):
         '''
         xyz: numpy array of desired xyz
         rpy: numpy array of desired roll pitch yaw
@@ -117,7 +117,6 @@ class KinematicSolver:
             i+=1
         else:
             current_error = self.calculate_joint_state_error(estimate,xyz,rpy)
-
         return estimate, np.linalg.norm(current_error), i
 
     def is_joint_state_safe(self, joint_state):
@@ -126,13 +125,16 @@ class KinematicSolver:
         T = self.forward(joint_state)
         joint_translations = [self.transformation_matrix_to_translation(t) for t in T]
         for box in self.safety_boxes:
-            for joint_translation in joint_translations:
-                for dim in ['x', 'y', 'z']:
-                    if joint_translation[0] > max(box[f'{dim}1'], box[f'{dim}2']):
-                        return False
-                    if joint_translation[0] < min(box[f'{dim}1'], box[f'{dim}2']):
-                        return False
-        return True
+            for j, joint_translation in enumerate(joint_translations):
+                in_box = True
+                for i, dim in enumerate(['x', 'y', 'z']):
+                    below_max = joint_translation[i] < max(box[f'{dim}1'], box[f'{dim}2'])
+                    above_min = joint_translation[i] > min(box[f'{dim}1'], box[f'{dim}2'])
+                    if not (above_min and below_max):
+                        in_box = False
+                if in_box:
+                    return False, self.links[j-1]['name']
+        return True, None
 
     def create_kd_tree(self, k):
         '''
@@ -178,7 +180,6 @@ if __name__ == '__main__':
     yaml_path = "/home/eryk/Documents/projects/zima/src/zima_ros2/src/zima_controls/arm_data/4dof_arm_structure.yaml"
     safety_path = "/home/eryk/Documents/projects/zima/src/zima_ros2/src/zima_controls/arm_data/4dof_arm_safety.yaml"
 
-    k=10000
     solver = KinematicSolver(yaml_path, arm_safety_yaml_path=safety_path, dimension_mask=[1,1,1,1,0,0])
     
     '''
@@ -197,5 +198,5 @@ if __name__ == '__main__':
         visualize_arm([true_joint_positions, ik_joint_positions])
     '''
 
-    visualize_interactive(solver)
+    visualize_interactive(solver, joint_mode=True)
     

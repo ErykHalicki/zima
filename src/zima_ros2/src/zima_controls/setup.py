@@ -1,4 +1,5 @@
 from setuptools import find_packages, setup
+from glob import glob
 
 package_name = 'zima_controls'
 
@@ -11,7 +12,8 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', ['launch/arm_control.py']),
-        ('share/' + package_name + '/urdf', ['urdf/robot_arm_ikpy.urdf']),
+        ('share/' + package_name + '/urdf', glob('urdf/*')),
+        ('share/' + package_name + '/arm_data', glob('arm_data/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -22,9 +24,6 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'ikpy_test = zima_controls.ikpy_test:main',
-            'ik_service = zima_controls.ik_service:main',
-            'ik_client_speed_test = zima_controls.ik_client_speed_test:main',
             'arm_controller = zima_controls.arm_controller:main'
         ],
     },
