@@ -8,7 +8,7 @@ limits:
     min: 0
   translation:
     max: 0.3
-    max: -0.3
+    min: -0.3
   rotation: 
     max: 1.5707
     min: -1.5707
