@@ -53,16 +53,18 @@ class CommandGeneratorNode(Node):
             if position > 180 or position < 0:
                 self.get_logger().error("JointState message has out of bounds position data")
                 return
+
+        if len(servo_indices) != len(msg.position):
+            raise Exception(f"Size of provided joint state ({len(msg.position)}) != {len(servo_indices)}")
         
         # Create and publish a command for each servo
         for i, servo_idx in enumerate(servo_indices):
-            if i < len(msg.position):
-                command = HardwareCommand()
-                command.header = msg.header
-                command.subsystem = servo_idx  # Servo ID (0-7)
-                command.value = msg.position[i]   
-                
-                self.hw_command_pub.publish(command)
+            command = HardwareCommand()
+            command.header = msg.header
+            command.subsystem = servo_idx  # Servo ID (0-7)
+            command.value = msg.position[i]   
+
+            self.hw_command_pub.publish(command)
     
     def servo_command_callback(self, msg): # only for manual testing of servos, do not use in arm controller
         """Convert ServoCommand messages to hardware commands."""
