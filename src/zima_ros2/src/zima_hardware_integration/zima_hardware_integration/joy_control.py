@@ -93,7 +93,7 @@ class JoyControlNode(Node):
 
         arm_delta = ArmStateDelta()
         arm_delta.translation = Vector3(x=left_y, y=-left_x, z=right_y)
-        arm_delta.orientation = Vector3(x=0.0, y=0.0, z=-right_x)
+        arm_delta.orientation = Vector3(x=right_x, y=0.0, z=0.0)
         arm_delta.gripper = gripper
 
         self.arm_delta_pub.publish(arm_delta)
