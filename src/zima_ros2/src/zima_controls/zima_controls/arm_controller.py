@@ -84,7 +84,7 @@ class ArmController(Node):
         joint_state = JointState()
         joint_state.header.stamp = self.get_clock().now().to_msg()
         joint_state.name = ['base', 'shoulder', 'elbow', 'wrist', 'gripper']
-        joint_state.position = np.degrees(total_joint_angles)
+        joint_state.position = np.degrees(total_joint_angles) + 90
 
         self.joint_state_pub.publish(joint_state)
 

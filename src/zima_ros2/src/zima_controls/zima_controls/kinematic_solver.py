@@ -198,5 +198,5 @@ if __name__ == '__main__':
         visualize_arm([true_joint_positions, ik_joint_positions])
     '''
 
-    visualize_interactive(solver)
+    visualize_interactive(solver, joint_mode=True)
     
