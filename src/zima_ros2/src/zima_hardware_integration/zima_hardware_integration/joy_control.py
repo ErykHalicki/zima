@@ -3,6 +3,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import Joy
 from zima_msgs.msg import MotorCommand, ArmStateDelta, ServoCommand
 from geometry_msgs.msg import Vector3
+from std_msgs.msg import Empty
 
 class JoyControlNode(Node):
     def __init__(self):
@@ -41,14 +42,13 @@ class JoyControlNode(Node):
         self.motor_pub = self.create_publisher(MotorCommand, '/motor_command', 10)
         self.arm_delta_pub = self.create_publisher(ArmStateDelta, '/arm_state_delta', 10)
         self.servo_pub = self.create_publisher(ServoCommand, '/servo_command', 10)
+        self.reset_arm_pub = self.create_publisher(Empty, '/reset_arm', 10)
 
         self.get_logger().info('Joy control node initialized')
 
     def joy_callback(self, msg):
         if msg.buttons[self.BTN_R1]:
             self.emergency_stop()
-            self.send_motor_command(MotorCommand.MOTOR_LEFT, 0)
-            self.send_motor_command(MotorCommand.MOTOR_RIGHT, 0)
             return
 
         self.process_track_commands(msg)
@@ -135,6 +135,11 @@ class JoyControlNode(Node):
             else:
                 command.position = -1.0
             self.servo_pub.publish(command)
+
+        self.reset_arm_pub.publish(Empty())
+
+        self.send_motor_command(MotorCommand.MOTOR_LEFT, 0)
+        self.send_motor_command(MotorCommand.MOTOR_RIGHT, 0)
 
 def main(args=None):
     rclpy.init(args=args)

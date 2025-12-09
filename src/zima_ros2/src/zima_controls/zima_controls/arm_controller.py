@@ -4,6 +4,7 @@ from sensor_msgs.msg import JointState
 from zima_msgs.msg import ArmStateDelta
 from zima_controls.kinematic_solver import KinematicSolver
 from rclpy.node import Node
+from std_msgs.msg import Empty
 import rclpy
 
 class ArmState:
@@ -62,6 +63,10 @@ class ArmController(Node):
         denorm_coeffs = denorm_data['coefficients']
         limits = denorm_data.get('limits', None)
 
+        self.initial_state = initial_state
+        self.denorm_coeffs = denorm_coeffs
+        self.limits = limits
+
         self.arm_state = ArmState(*initial_state, gripper=0.0, denorm_coeffs=denorm_coeffs, limits=limits)
 
         self.kinematic_solver = KinematicSolver(arm_structure_path, arm_safety_yaml_path=arm_safety_path, dimension_mask=[1,1,1,1,0,0])
@@ -70,6 +75,13 @@ class ArmController(Node):
             ArmStateDelta,
             '/arm_state_delta',
             self.delta_callback,
+            10
+        )
+
+        self.reset_sub = self.create_subscription(
+            Empty,
+            '/reset_arm',
+            self.reset_callback,
             10
         )
 
@@ -98,6 +110,10 @@ class ArmController(Node):
         joint_state.position = np.degrees(total_joint_angles) + 90
 
         self.joint_state_pub.publish(joint_state)
+
+    def reset_callback(self, msg: Empty):
+        self.arm_state = ArmState(*self.initial_state, gripper=0.0, denorm_coeffs=self.denorm_coeffs, limits=self.limits)
+        self.get_logger().info('Arm state reset to initial pose')
 
 def main(args=None):
     rclpy.init(args=args)
