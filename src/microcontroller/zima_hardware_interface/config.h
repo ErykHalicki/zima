@@ -20,12 +20,12 @@ const int SERVO_PINS[] = {16, 27, 25, 14, 26, 18, 17, 19};
 
 // Serial Communication
 #define SERIAL_BAUD 115200
-#define STATUS_REPORT_RATE 100   // Hz (status updates per second)
+#define STATUS_REPORT_RATE 20   // Hz (status updates per second)
 
 // Timing and Debounce
 #define ENCODER_DEBOUNCE_DELAY 5  // ms
 
 // Servo Motor Movement Speed
-#define SERVO_SPEED 50         // Degrees per second
+#define SERVO_SPEED 120         // Degrees per second
 
 #endif // ZIMA_HARDWARE_CONFIG_H
