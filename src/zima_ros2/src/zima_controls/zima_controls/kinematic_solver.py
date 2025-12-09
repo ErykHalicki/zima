@@ -87,10 +87,10 @@ class KinematicSolver:
             joint_state_minus[i] -= h
             plus_h_error = self.calculate_joint_state_error(joint_state_plus, target_xyz, target_rpy)
             minus_h_error = self.calculate_joint_state_error(joint_state_minus, target_xyz, target_rpy)
-            jacobian[:,i] = (plus_h_error - minus_h_error) / 2*h # ith column corresponds to the ith joints partial derivatives of error
+            jacobian[:,i] = (plus_h_error - minus_h_error) / (2*h) # ith column corresponds to the ith joints partial derivatives of error
         return jacobian
 
-    def solve(self, xyz, rpy=[0,0,0], current_joint_state = None, eps=0.005, max_iters=15, step_size=0.0005):
+    def solve(self, xyz, rpy=[0,0,0], current_joint_state = None, eps=0.01, max_iters=20, step_size=0.2):
         '''
         xyz: numpy array of desired xyz
         rpy: numpy array of desired roll pitch yaw
@@ -107,9 +107,8 @@ class KinematicSolver:
         estimate = np.array(joint_state_warm_start)
         current_error = warm_start_error
         while i < max_iters:
-            current_error = self.calculate_joint_state_error(estimate,xyz,rpy)
+            current_error = self.calculate_joint_state_error(estimate,xyz,rpy) # TODO factor in current joint state error
             if np.linalg.norm(current_error) <= eps:
-                #print(f"solved with {i} iterations")
                 break # solution is good enough
             jacobian = self.estimate_jacobian(estimate, xyz,rpy)
             estimate += step_size * np.linalg.pinv(jacobian) @ -current_error
@@ -198,5 +197,5 @@ if __name__ == '__main__':
         visualize_arm([true_joint_positions, ik_joint_positions])
     '''
 
-    visualize_interactive(solver, joint_mode=True)
+    visualize_interactive(solver, joint_mode=False)
     

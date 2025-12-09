@@ -1,14 +1,26 @@
 coefficients:
-  gripper: 0.05 # max +- 0.05 rad in one time step
-  translation: 0.0035 # max +- 0.35cm per time step
-  rotation: 0.02 # max +- 0.02 rad in one time step
+  gripper: 0.05
+  translation: 0.00275
+  rotation: 0.05
 limits:
   gripper:
     max: 1.35
     min: 0
-  translation:
-    max: 0.25
-    min: -0.25
-  rotation: 
+  x:
+    max: 0.3
+    min: 0.1
+  y:
+    max: 0.2
+    min: -0.2
+  z:
+    max: 0.2
+    min: -0.1
+  roll:
+    max: 1.5707
+    min: -1.5707
+  pitch:
+    max: 1.5707
+    min: -1.5707
+  yaw:
     max: 1.5707
     min: -1.5707

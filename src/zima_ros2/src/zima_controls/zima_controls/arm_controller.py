@@ -29,12 +29,12 @@ class ArmState:
         self.gripper += max(-1, min(1, delta.gripper)) * self.denorm_coeffs['gripper']
 
         if self.limits:
-            self.x = max(self.limits['translation']['min'], min(self.limits['translation']['max'], self.x))
-            self.y = max(self.limits['translation']['min'], min(self.limits['translation']['max'], self.y))
-            self.z = max(self.limits['translation']['min'], min(self.limits['translation']['max'], self.z))
-            self.roll = max(self.limits['rotation']['min'], min(self.limits['rotation']['max'], self.roll))
-            self.pitch = max(self.limits['rotation']['min'], min(self.limits['rotation']['max'], self.pitch))
-            self.yaw = max(self.limits['rotation']['min'], min(self.limits['rotation']['max'], self.yaw))
+            self.x = max(self.limits['x']['min'], min(self.limits['x']['max'], self.x))
+            self.y = max(self.limits['y']['min'], min(self.limits['y']['max'], self.y))
+            self.z = max(self.limits['z']['min'], min(self.limits['z']['max'], self.z))
+            self.roll = max(self.limits['roll']['min'], min(self.limits['roll']['max'], self.roll))
+            self.pitch = max(self.limits['pitch']['min'], min(self.limits['pitch']['max'], self.pitch))
+            self.yaw = max(self.limits['yaw']['min'], min(self.limits['yaw']['max'], self.yaw))
             self.gripper = max(self.limits['gripper']['min'], min(self.limits['gripper']['max'], self.gripper))
 
     def to_xyzrpy(self):
