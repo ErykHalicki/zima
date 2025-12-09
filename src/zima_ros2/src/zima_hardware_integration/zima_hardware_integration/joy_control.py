@@ -1,13 +1,26 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
-from zima_msgs.msg import MotorCommand, ArmStateDelta
+from zima_msgs.msg import MotorCommand, ArmStateDelta, ServoCommand
 from geometry_msgs.msg import Vector3
 
 class JoyControlNode(Node):
     def __init__(self):
         super().__init__('joy_control_node')
 
+        self.BTN_X = 0
+        self.BTN_CIRCLE = 1
+        self.BTN_TRIANGLE = 2
+        self.BTN_SQUARE = 3
+        self.BTN_L1 = 4
+        self.BTN_R1 = 5
+        self.BTN_L2 = 6
+        self.BTN_R2 = 7
+        self.BTN_SELECT = 8
+        self.BTN_START = 9
+        self.BTN_PS = 10
+        self.BTN_L3 = 11
+        self.BTN_R3 = 12
         self.BTN_DPAD_UP = 13
         self.BTN_DPAD_DOWN = 14
         self.BTN_DPAD_LEFT = 15
@@ -29,10 +42,15 @@ class JoyControlNode(Node):
         self.joy_sub = self.create_subscription(Joy, 'joy', self.joy_callback, 10)
         self.motor_pub = self.create_publisher(MotorCommand, '/motor_command', 10)
         self.arm_delta_pub = self.create_publisher(ArmStateDelta, '/arm_state_delta', 10)
+        self.servo_pub = self.create_publisher(ServoCommand, '/servo_command', 10)
 
         self.get_logger().info('Joy control node initialized')
 
     def joy_callback(self, msg):
+        if msg.buttons[self.BTN_R1]:
+            self.emergency_stop()
+            return
+
         self.process_track_commands(msg)
         self.process_arm_commands(msg)
 
@@ -102,6 +120,16 @@ class JoyControlNode(Node):
             command.speed = abs(speed)
 
         self.motor_pub.publish(command)
+
+    def emergency_stop(self):
+        self.get_logger().info('Emergency stop activated', throttle_duration_sec=1.0)
+
+        for servo_id in range(8):
+            command = ServoCommand()
+            command.header.stamp = self.get_clock().now().to_msg()
+            command.servo_id = servo_id
+            command.position = -1.0
+            self.servo_pub.publish(command)
 
 def main(args=None):
     rclpy.init(args=args)
