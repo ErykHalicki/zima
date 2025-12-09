@@ -68,8 +68,8 @@ class JoyControlNode(Node):
         elif msg.buttons[self.BTN_DPAD_RIGHT]:
             angular = -1.0
 
-        left_speed = linear + angular
-        right_speed = linear - angular
+        left_speed = linear - angular
+        right_speed = linear + angular
 
         max_value = max(abs(left_speed), abs(right_speed), 1.0)
         left_speed = left_speed / max_value
