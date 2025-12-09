@@ -24,7 +24,7 @@ class ArmState:
         self.roll += delta.orientation.x * self.denorm_coeffs['rotation']
         self.pitch += delta.orientation.y * self.denorm_coeffs['rotation']
         self.yaw += delta.orientation.z * self.denorm_coeffs['rotation']
-        self.gripper += delta.gripper_state * self.denorm_coeffs['gripper']
+        self.gripper += delta.gripper * self.denorm_coeffs['gripper']
 
     def to_xyzrpy(self):
         return np.array([self.x, self.y, self.z, self.roll, self.pitch, self.yaw])
