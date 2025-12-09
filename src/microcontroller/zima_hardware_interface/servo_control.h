@@ -86,7 +86,7 @@ public:
             }
             else if (motorIndex == 3) {
                 if (angle != -1)
-                    goal[motorIndex] = 180 - angle;
+                    goal[motorIndex] = 180 - angle; //TODO FIX BUG HERE CANNOT SEND -1 GOAL
             }
             else {
                 goal[motorIndex] = angle;
