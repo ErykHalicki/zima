@@ -1,6 +1,6 @@
 coefficients:
   gripper: 0.05 # max +- 0.05 rad in one time step
-  translation: 0.002 # max +- 0.2cm per time step
+  translation: 0.0035 # max +- 0.35cm per time step
   rotation: 0.02 # max +- 0.02 rad in one time step
 limits:
   gripper:
