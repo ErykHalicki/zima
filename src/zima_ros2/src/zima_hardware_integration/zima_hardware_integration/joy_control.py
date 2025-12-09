@@ -47,6 +47,8 @@ class JoyControlNode(Node):
     def joy_callback(self, msg):
         if msg.buttons[self.BTN_R1]:
             self.emergency_stop()
+            self.send_motor_command(MotorCommand.MOTOR_LEFT, 0)
+            self.send_motor_command(MotorCommand.MOTOR_RIGHT, 0)
             return
 
         self.process_track_commands(msg)
@@ -85,9 +87,11 @@ class JoyControlNode(Node):
         right_x = self.apply_deadzone(msg.axes[self.AXIS_RIGHT_X])
         right_y = self.apply_deadzone(msg.axes[self.AXIS_RIGHT_Y])
 
-        l2 = msg.buttons[self.BTN_L2]
-        r2 = msg.buttons[self.BTN_R2]
-        gripper = r2 - l2
+        gripper = 0.0
+        if msg.buttons[self.BTN_L2]:
+            gripper -= 1.0
+        if msg.buttons[self.BTN_R2]:
+            gripper += 1.0
 
         arm_delta = ArmStateDelta()
         arm_delta.translation = Vector3(x=left_y, y=left_x, z=right_y)
