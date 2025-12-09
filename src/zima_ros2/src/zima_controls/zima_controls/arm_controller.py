@@ -7,7 +7,7 @@ from rclpy.node import Node
 import rclpy
 
 class ArmState:
-    def __init__(self, x=0.0, y=0.0, z=0.0, roll=0.0, pitch=0.0, yaw=0.0, gripper=0.0, denorm_coeffs=None):
+    def __init__(self, x=0.0, y=0.0, z=0.0, roll=0.0, pitch=0.0, yaw=0.0, gripper=0.0, denorm_coeffs=None, limits=None):
         self.x = x
         self.y = y
         self.z = z
@@ -16,15 +16,25 @@ class ArmState:
         self.yaw = yaw
         self.gripper = gripper
         self.denorm_coeffs = denorm_coeffs
+        self.limits = limits
 
     def step(self, delta: ArmStateDelta):
-        self.x += delta.translation.x * self.denorm_coeffs['translation']
-        self.y += delta.translation.y * self.denorm_coeffs['translation']
-        self.z += delta.translation.z * self.denorm_coeffs['translation']
-        self.roll += delta.orientation.x * self.denorm_coeffs['rotation']
-        self.pitch += delta.orientation.y * self.denorm_coeffs['rotation']
-        self.yaw += delta.orientation.z * self.denorm_coeffs['rotation']
-        self.gripper += delta.gripper * self.denorm_coeffs['gripper']
+        self.x += max(-1, min(1, delta.translation.x)) * self.denorm_coeffs['translation']
+        self.y += max(-1, min(1, delta.translation.y)) * self.denorm_coeffs['translation']
+        self.z += max(-1, min(1, delta.translation.z)) * self.denorm_coeffs['translation']
+        self.roll += max(-1, min(1, delta.orientation.x)) * self.denorm_coeffs['rotation']
+        self.pitch += max(-1, min(1, delta.orientation.y)) * self.denorm_coeffs['rotation']
+        self.yaw += max(-1, min(1, delta.orientation.z)) * self.denorm_coeffs['rotation']
+        self.gripper += max(-1, min(1, delta.gripper)) * self.denorm_coeffs['gripper']
+
+        if self.limits:
+            self.x = max(self.limits['translation']['min'], min(self.limits['translation']['max'], self.x))
+            self.y = max(self.limits['translation']['min'], min(self.limits['translation']['max'], self.y))
+            self.z = max(self.limits['translation']['min'], min(self.limits['translation']['max'], self.z))
+            self.roll = max(self.limits['rotation']['min'], min(self.limits['rotation']['max'], self.roll))
+            self.pitch = max(self.limits['rotation']['min'], min(self.limits['rotation']['max'], self.pitch))
+            self.yaw = max(self.limits['rotation']['min'], min(self.limits['rotation']['max'], self.yaw))
+            self.gripper = max(self.limits['gripper']['min'], min(self.limits['gripper']['max'], self.gripper))
 
     def to_xyzrpy(self):
         return np.array([self.x, self.y, self.z, self.roll, self.pitch, self.yaw])
@@ -50,8 +60,9 @@ class ArmController(Node):
         with open(denorm_path, 'r') as f:
             denorm_data = yaml.safe_load(f)
         denorm_coeffs = denorm_data['coefficients']
+        limits = denorm_data.get('limits', None)
 
-        self.arm_state = ArmState(*initial_state, gripper=0.0, denorm_coeffs=denorm_coeffs)
+        self.arm_state = ArmState(*initial_state, gripper=0.0, denorm_coeffs=denorm_coeffs, limits=limits)
 
         self.kinematic_solver = KinematicSolver(arm_structure_path, arm_safety_yaml_path=arm_safety_path, dimension_mask=[1,1,1,1,0,0])
 
