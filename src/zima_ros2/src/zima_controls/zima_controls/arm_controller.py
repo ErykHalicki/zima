@@ -1,6 +1,5 @@
 import yaml
 import numpy as np
-from pathlib import Path
 from sensor_msgs.msg import JointState
 from zima_msgs.msg import ArmStateDelta
 from zima_controls.kinematic_solver import KinematicSolver
@@ -36,10 +35,12 @@ class ArmController(Node):
         self.declare_parameter('initial_arm_state', [0.2, 0.0, 0.0, 0.0, 0.0, 0.0])
         self.declare_parameter('denorm_config_path', '')
         self.declare_parameter('arm_structure_path', '')
+        self.declare_parameter('arm_safety_path', '')
 
         initial_state = self.get_parameter('initial_arm_state').value
         denorm_path = self.get_parameter('denorm_config_path').value
         arm_structure_path = self.get_parameter('arm_structure_path').value
+        arm_safety_path = self.get_parameter('arm_safety_path').value
 
         with open(denorm_path, 'r') as f:
             denorm_data = yaml.safe_load(f)
@@ -47,22 +48,22 @@ class ArmController(Node):
 
         self.arm_state = ArmState(*initial_state, gripper=0.0, denorm_coeffs=denorm_coeffs)
 
-        self.ik_solver = KinematicSolver(arm_structure_path, dimension_mask=[1,1,1,1,0,0])
+        self.kinematic_solver = KinematicSolver(arm_structure_path, arm_safety_path=arm_safety_path, dimension_mask=[1,1,1,1,0,0])
 
         self.delta_sub = self.create_subscription(
             ArmStateDelta,
-            'arm_state_delta',
+            '/arm_state_delta',
             self.delta_callback,
             10
         )
 
-        self.joint_state_pub = self.create_publisher(JointState, 'joint_states', 10)
+        self.joint_state_pub = self.create_publisher(JointState, '/goal_joint_state', 10)
 
     def delta_callback(self, msg: ArmStateDelta):
         self.arm_state.step(msg)
 
         xyzrpy = self.arm_state.to_xyzrpy()
-        joint_angles = list(self.ik_solver.solve(xyzrpy)) + [self.arm_state.gripper]
+        joint_angles = list(self.kinematic_solver.solve(xyzrpy[:3], xyzrpy[3:])) + [self.arm_state.gripper]
 
         joint_state = JointState()
         joint_state.header.stamp = self.get_clock().now().to_msg()

@@ -1,10 +1,34 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.widgets import Slider
 
 
-def visualize_arm(arms):
+def _draw_safety_boxes(ax, boxes):
+    for box in boxes:
+        x1, y1, z1 = box['x1'], box['y1'], box['z1']
+        x2, y2, z2 = box['x2'], box['y2'], box['z2']
+
+        vertices = [
+            [x1, y1, z1], [x2, y1, z1], [x2, y2, z1], [x1, y2, z1],
+            [x1, y1, z2], [x2, y1, z2], [x2, y2, z2], [x1, y2, z2]
+        ]
+
+        faces = [
+            [vertices[0], vertices[1], vertices[5], vertices[4]],
+            [vertices[7], vertices[6], vertices[2], vertices[3]],
+            [vertices[0], vertices[3], vertices[7], vertices[4]],
+            [vertices[1], vertices[2], vertices[6], vertices[5]],
+            [vertices[0], vertices[1], vertices[2], vertices[3]],
+            [vertices[4], vertices[5], vertices[6], vertices[7]]
+        ]
+
+        poly = Poly3DCollection(faces, alpha=0.15, facecolor='red', edgecolor='darkred', linewidth=0.5)
+        ax.add_collection3d(poly)
+
+
+def visualize_arm(arms, safety_boxes=None):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
@@ -20,6 +44,9 @@ def visualize_arm(arms):
         ax.plot(xs, ys, zs, 'o-', linewidth=2, markersize=8, color=color, label=f'Arm {i+1}')
         ax.scatter(xs[0], ys[0], zs[0], c='green', s=100)
         ax.scatter(xs[-1], ys[-1], zs[-1], c='red', s=100, edgecolors=color, linewidths=2)
+
+    if safety_boxes:
+        _draw_safety_boxes(ax, safety_boxes)
 
     max_range = 0.2
     ax.set_xlim([-max_range/2, max_range])
@@ -56,6 +83,9 @@ def visualize_interactive(solver, initial_joints=None, joint_mode=False):
             ax.plot(xs, ys, zs, 'o-', linewidth=2, markersize=8)
             ax.scatter(xs[0], ys[0], zs[0], c='green', s=100, label='Base')
             ax.scatter(xs[-1], ys[-1], zs[-1], c='red', s=100, label='End Effector')
+
+            if hasattr(solver, 'safety_boxes'):
+                _draw_safety_boxes(ax, solver.safety_boxes)
 
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
@@ -95,7 +125,7 @@ def visualize_interactive(solver, initial_joints=None, joint_mode=False):
 
         def update_arm_ik(pose):
             ax.clear()
-            joints, error = solver.solve(np.array(pose[:3]), np.array(pose[3:]))
+            joints, error, iterations = solver.solve(np.array(pose[:3]), np.array(pose[3:]))
             if joints is not None:
                 transforms = solver.forward(joints)
                 points = np.array([t[:3, 3] for t in transforms])
@@ -113,10 +143,13 @@ def visualize_interactive(solver, initial_joints=None, joint_mode=False):
                 ax.set_ylabel('Y')
                 ax.set_zlabel('Z')
                 ax.legend()
-                ax.set_title(f'Target: ({pose[0]:.3f}, {pose[1]:.3f}, {pose[2]:.3f}) | Error: {error:.6f}')
+                ax.set_title(f'Target: ({pose[0]:.3f}, {pose[1]:.3f}, {pose[2]:.3f}) | Error: {error:.6f} | Iterations: {iterations}')
             else:
                 ax.scatter(pose[0], pose[1], pose[2], c='blue', s=100, marker='x', label='Target')
                 ax.set_title('IK Solution Not Found')
+
+            if hasattr(solver, 'safety_boxes'):
+                _draw_safety_boxes(ax, solver.safety_boxes)
 
             max_range = 0.2
             ax.set_xlim([-max_range, max_range])

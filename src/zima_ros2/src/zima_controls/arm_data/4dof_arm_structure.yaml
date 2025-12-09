@@ -8,34 +8,46 @@ links:
     translation: [0,0,0]
     axis: [0, 1, 0]
     bias: 0.5235 #pi/6
+    max: 1.5707
+    min: -1.5707
 
   - name: "base_to_shoulder"
     type: "revolute"
     translation: [0,0,0]
     axis: [0, 0, 1]
     bias: 0.0
+    max: 1.5707
+    min: -1.5707
 
   - name: "shoulder_to_elbow"
     type: "revolute"
     translation: [0,0,0.03] # 0.03 because thats how far it is translated from the base 
     axis: [0, 1, 0]
     bias: -1.5707 #pi/2
+    max: 1.5707
+    min: -1.5707
 
   - name: "elbow_to_wrist"
     type: "revolute"
     translation: [0.10,-0.02,0]
     axis: [0, 1, 0]
-    bias: 0.0 
+    bias: 1.5707 
+    max: 1.5707
+    min: -1.5707
 
   - name: "wrist"
-    type: "fixed"
+    type: "revolute"
     translation: [0.12,-0.02,0]
     axis: [1, 0, 0]
     bias: 0.0 
+    max: 1.5707
+    min: -1.5707
   
   - name: "gripper"
     type: "fixed"
     translation: [0.05,0.0,0]
     axis: [1, 0, 0]
     bias: 0.0
+    max: 1.5707
+    min: -1.5707
 

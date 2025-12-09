@@ -6,26 +6,55 @@ import math
 import time
 
 class KinematicSolver:
-    def __init__(self, arm_structure_yaml_path, fk_sample_count = 10000, dimension_mask=[1]*6):
+    def __init__(self, arm_structure_yaml_path, arm_safety_yaml_path=None, fk_sample_count = 10000, dimension_mask=[1]*6):
         '''
         dimension_mask (xyzrpy): specifies which dimensions to optimize against during inverse kin solving
         '''
         with open(arm_structure_yaml_path, 'r') as f:
             structure_data = yaml.safe_load(f)
+        with open(arm_safety_yaml_path, 'r') as f:
+            safety_data = yaml.safe_load(f)
+        self.safety_boxes = None
+        if arm_safety_yaml_path is not None:
+            self.safety_boxes = safety_data['boxes']
         self.dimension_mask = dimension_mask
         self.links = structure_data['links']
         self.revolute_links = [link for link in self.links if link['type']=='revolute']
-        self.orientation_weight = 0.1
+        self.orientation_weight = 0.05
         self.translation_weight = 1.0
         self.kd_precision = 4
         self.kd_tree, self.joint_LUT = self.create_kd_tree(fk_sample_count)
         self.max_reach = sum([np.linalg.norm(link['translation']) for link in self.links])
         
+    def clamp_joints(self, joints, revolute_only=True, with_bias=False):
+        if revolute_only and len(joints) != len(self.revolute_links):
+            raise Exception(f"Cannot clamp {len(joints)} revolute joints, must pass in {len(self.revolute_links)}")
+        elif not revolute_only and len(joints) != len(self.links):
+            raise Exception(f"Cannot clamp {len(joints)} joints, must pass in {len(self.links)}")
+        
+        result = []
+        links=None
+
+        if revolute_only:
+            links=self.revolute_links
+        else:
+            links=self.links
+
+        for i, link in enumerate(links):
+            bias=0.0
+            if with_bias:
+                bias = link['bias']
+            result.append(min(link['max']+bias, max(joints[i], link['min']+bias)))
+        return result
+
     def forward(self,joints):
+        '''
+        joints: list of revolute joint states
+        '''
         if len(joints) != len(self.revolute_links):
             print(f"Joints: {joints}")
             raise Exception(f"Cannot do FK with {len(joints)} joint angles, there are {len(self.revolute_links)} revolute links")
-
+        joints = self.clamp_joints(joints)
         T = [np.eye(4)]
         i=0
         for link in self.links:
@@ -61,7 +90,7 @@ class KinematicSolver:
             jacobian[:,i] = (plus_h_error - minus_h_error) / 2*h # ith column corresponds to the ith joints partial derivatives of error
         return jacobian
 
-    def solve(self, xyz, rpy=[0,0,0], current_joint_state = None, eps=0.001, max_iters=10, step_size=0.001):
+    def solve(self, xyz, rpy=[0,0,0], current_joint_state = None, eps=0.001, max_iters=40, step_size=0.0005):
         '''
         xyz: numpy array of desired xyz
         rpy: numpy array of desired roll pitch yaw
@@ -84,12 +113,26 @@ class KinematicSolver:
                 break # solution is good enough
             jacobian = self.estimate_jacobian(estimate, xyz,rpy)
             estimate += step_size * np.linalg.pinv(jacobian) @ -current_error
+            estimate = self.clamp_joints(estimate)
             i+=1
         else:
-            #print(f"unsolved after {i} iterations")
-            pass
+            current_error = self.calculate_joint_state_error(estimate,xyz,rpy)
 
-        return estimate, np.linalg.norm(current_error)
+        return estimate, np.linalg.norm(current_error), i
+
+    def is_joint_state_safe(self, joint_state):
+        if self.safety_boxes is None:
+            raise Exception("Cannot evaluate joint safety with no provided safety box file")
+        T = self.forward(joint_state)
+        joint_translations = [self.transformation_matrix_to_translation(t) for t in T]
+        for box in self.safety_boxes:
+            for joint_translation in joint_translations:
+                for dim in ['x', 'y', 'z']:
+                    if joint_translation[0] > max(box[f'{dim}1'], box[f'{dim}2']):
+                        return False
+                    if joint_translation[0] < min(box[f'{dim}1'], box[f'{dim}2']):
+                        return False
+        return True
 
     def create_kd_tree(self, k):
         '''
@@ -133,9 +176,10 @@ class KinematicSolver:
 if __name__ == '__main__':
     from arm_visualizer import visualize_arm, visualize_interactive
     yaml_path = "/home/eryk/Documents/projects/zima/src/zima_ros2/src/zima_controls/arm_data/4dof_arm_structure.yaml"
+    safety_path = "/home/eryk/Documents/projects/zima/src/zima_ros2/src/zima_controls/arm_data/4dof_arm_safety.yaml"
 
     k=10000
-    solver = KinematicSolver(yaml_path, k, [1,1,1,1,0,0])
+    solver = KinematicSolver(yaml_path, arm_safety_yaml_path=safety_path, dimension_mask=[1,1,1,1,0,0])
     
     '''
     num_arms = 20
