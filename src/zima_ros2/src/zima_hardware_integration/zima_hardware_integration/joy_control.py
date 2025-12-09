@@ -28,10 +28,8 @@ class JoyControlNode(Node):
 
         self.AXIS_LEFT_X = 0
         self.AXIS_LEFT_Y = 1
-        self.AXIS_RIGHT_X = 2
-        self.AXIS_L2 = 3
-        self.AXIS_R2 = 4
-        self.AXIS_RIGHT_Y = 5
+        self.AXIS_RIGHT_X = 3
+        self.AXIS_RIGHT_Y = 4
 
         self.declare_parameter('joy_deadzone', 0.05)
         self.declare_parameter('max_speed', 255)
@@ -87,13 +85,13 @@ class JoyControlNode(Node):
         right_x = self.apply_deadzone(msg.axes[self.AXIS_RIGHT_X])
         right_y = self.apply_deadzone(msg.axes[self.AXIS_RIGHT_Y])
 
-        l2_trigger = (1.0 - msg.axes[self.AXIS_L2]) / 2.0
-        r2_trigger = (1.0 - msg.axes[self.AXIS_R2]) / 2.0
-        gripper = r2_trigger - l2_trigger
+        l2 = msg.buttons[self.BTN_L2]
+        r2 = msg.buttons[self.BTN_R2]
+        gripper = r2 - l2
 
         arm_delta = ArmStateDelta()
-        arm_delta.translation = Vector3(x=left_y, y=-left_x, z=right_y)
-        arm_delta.orientation = Vector3(x=right_x, y=0.0, z=0.0)
+        arm_delta.translation = Vector3(x=left_y, y=left_x, z=right_y)
+        arm_delta.orientation = Vector3(x=-right_x, y=0.0, z=0.0)
         arm_delta.gripper = gripper
 
         self.arm_delta_pub.publish(arm_delta)
