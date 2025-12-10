@@ -169,6 +169,7 @@ class SerialReceiverNode(Node):
             ]
 
             joint_msg.position.pop(1) # servo 1 and 2 are redundant
+            joint_msg.position[2] *= -1 #servo 3 / joint 2 is sent inverted from microcontroller FIXME
             
             self.joint_states_pub.publish(joint_msg)#published from -pi/2 to pi/2
     
