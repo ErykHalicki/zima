@@ -29,20 +29,20 @@ class SerialReceiverNode(Node):
         # Create publishers
         self.hardware_status_pub = self.create_publisher(
             HardwareStatus, 
-            'hardware_status', 
+            '/hardware_status', 
             10
         )
         
         self.encoder_data_pub = self.create_publisher(
             EncoderData,
-            'encoder_data',
+            '/encoder_data',
             10
         )
         
         # Joint state publisher for RViz visualization
         self.joint_states_pub = self.create_publisher(
             JointState,
-            'current_servo_positions',
+            '/current_joint_state',
             10
         )
         

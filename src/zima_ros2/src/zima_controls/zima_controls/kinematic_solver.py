@@ -70,15 +70,19 @@ class KinematicSolver:
             T.append(T[-1]@T_link)
         return T
 
-    def calculate_joint_state_error(self, joint_state, target_xyz, target_rpy):
+    def calculate_joint_state_error(self, joint_state, target_xyz, target_rpy, current_joint_state=None):
         T = self.forward(joint_state)[-1]
         weighted_orientation_errors = (target_rpy - self.transformation_matrix_to_euler(T)) * self.orientation_weight
         weighted_translation_errors = (target_xyz - self.transformation_matrix_to_translation(T)) * self.translation_weight
         total_weighted_errors = np.concatenate((weighted_translation_errors, weighted_orientation_errors))
         total_weighted_errors*=self.dimension_mask
+        if current_joint_state is not None:
+            #joint_errors = current_joint_state - joint_state
+            #total_weighted_errors = np.concatenate
+            pass
         return total_weighted_errors
 
-    def estimate_jacobian(self, joint_state, target_xyz, target_rpy, h=np.radians(2)): # default of 2 degrees
+    def estimate_jacobian(self, joint_state, target_xyz, target_rpy, current_joint_state=None, h=np.radians(2)): # default of 2 degrees
         jacobian = np.empty((6,len(joint_state)))
         for i in range(len(joint_state)):
             joint_state_plus = joint_state.copy()
