@@ -7,7 +7,7 @@ links:
     type: "fixed"
     translation: [0,0,0]
     axis: [0, 1, 0]
-    bias: 0.5235 #pi/6
+    bias: 0.7853 #pi/4
     max: 1.5707
     min: -1.5707
 
@@ -29,7 +29,7 @@ links:
 
   - name: "elbow_to_wrist"
     type: "revolute"
-    translation: [0.10,-0.02,0]
+    translation: [0.12,-0.02,0]
     axis: [0, 1, 0]
     bias: 1.5707 
     max: 1.5707
@@ -37,7 +37,7 @@ links:
 
   - name: "wrist"
     type: "revolute"
-    translation: [0.12,-0.02,0]
+    translation: [0.14,-0.02,0]
     axis: [1, 0, 0]
     bias: 0.0 
     max: 1.5707
@@ -45,7 +45,7 @@ links:
   
   - name: "gripper"
     type: "fixed"
-    translation: [0.05,0.0,0]
+    translation: [0.10,0.0,0]
     axis: [1, 0, 0]
     bias: 0.0
     max: 1.5707
