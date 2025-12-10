@@ -69,13 +69,12 @@ class ArmVisualizationNode(Node):
             self.get_logger().warn(f'Received joint state with {len(msg.position)} joints, expected {len(self.solver.revolute_links)}')
             return
 
-        joint_angles_degrees = np.array(msg.position[:len(self.solver.revolute_links)]) - 90.0
-        joint_angles_radians = np.radians(joint_angles_degrees)
+        joint_angles = np.array(msg.position[:len(self.solver.revolute_links)])
 
-        self.current_joint_angles = joint_angles_radians
+        self.current_joint_angles = joint_angles
 
-        transforms = self.solver.forward(joint_angles_radians)
-        self.current_points = np.array([t[:3, 3] for t in transforms])
+        transforms = self.solver.forward(joint_angles)
+        self.current_points = np.array([self.solver.transformation_matrix_to_translation(t) for t in transforms])
 
     def update_plot(self, frame):
         if self.current_points is not None:
