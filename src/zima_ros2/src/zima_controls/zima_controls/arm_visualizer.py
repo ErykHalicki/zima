@@ -28,7 +28,7 @@ def _draw_safety_boxes(ax, boxes):
         ax.add_collection3d(poly)
 
 
-def visualize_arm(arms, safety_boxes=None):
+def visualize_arm(arms, safety_boxes=None, display_time=None):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
@@ -59,7 +59,12 @@ def visualize_arm(arms, safety_boxes=None):
     ax.legend()
     ax.set_title('Robot Arm Visualization')
 
-    plt.show()
+    if display_time is not None:
+        plt.show(block=False)
+        plt.pause(display_time)
+        plt.close(fig)
+    else:
+        plt.show()
 
 
 def visualize_interactive(solver, initial_joints=None, joint_mode=False):

@@ -35,7 +35,6 @@ class ArmVisualizationNode(Node):
         self.get_logger().info('Arm visualization node started')
 
     def joint_state_callback(self, msg):
-        # diregard gripper state
         if len(msg.position)-1 != len(self.solver.revolute_links):
             self.get_logger().warn(f'Received joint state with {len(msg.position)} joints, expected {len(self.solver.revolute_links)}')
             return
@@ -45,7 +44,7 @@ class ArmVisualizationNode(Node):
         transforms = self.solver.forward(joint_angles)
         points = np.array([self.solver.transformation_matrix_to_translation(t) for t in transforms])
 
-        visualize_arm([points], safety_boxes=self.solver.safety_boxes)
+        visualize_arm([points], safety_boxes=self.solver.safety_boxes, display_time=0.5)
 
 
 def main(args=None):
