@@ -6,6 +6,7 @@ from zima_controls.kinematic_solver import KinematicSolver
 from rclpy.node import Node
 from std_msgs.msg import Empty
 import rclpy
+import copy
 
 class ArmState:
     def __init__(self, x=0.0, y=0.0, z=0.0, roll=0.0, pitch=0.0, yaw=0.0, gripper=0.0, denorm_coeffs=None, limits=None):
@@ -89,6 +90,7 @@ class ArmController(Node):
         self.joint_state_pub = self.create_publisher(JointState, '/goal_joint_state', 10)
 
     def delta_callback(self, msg: ArmStateDelta):
+        arm_backup = copy.copy(self.armstate)
         self.arm_state.step(msg)
 
         xyzrpy = self.arm_state.to_xyzrpy()
@@ -97,10 +99,12 @@ class ArmController(Node):
         if(error >= self.max_error_thresh):
             self.get_logger().warn(f"IK Error {error} > {self.max_error_thresh} treshold. Not publishing joint state", throttle_duration_sec=2.0)
             self.get_logger().warn(f"Arm state: {xyzrpy}", throttle_duration_sec=2.0)
+            self.arm_state = arm_backup
             return
         elif not safe:
             self.get_logger().warn(f"Unsafe IK solution. {violating_joint_name} in unsafe position. Not publishing joint state.", throttle_duration_sec=2.0)
             self.get_logger().warn(f"Arm state: {xyzrpy}", throttle_duration_sec=2.0)
+            self.arm_state = arm_backup
             return
 
         self.last_joint_state = joint_states
@@ -115,6 +119,7 @@ class ArmController(Node):
 
     def reset_callback(self, msg: Empty):
         self.arm_state = ArmState(*self.initial_state, gripper=0.0, denorm_coeffs=self.denorm_coeffs, limits=self.limits)
+        self.last_joint_state = None
         self.get_logger().info('Arm state reset to initial pose')
 
 def main(args=None):
