@@ -96,12 +96,14 @@ class ArmController(Node):
         xyzrpy = self.arm_state.to_xyzrpy()
         joint_states, error, iterations = self.kinematic_solver.solve(xyzrpy[:3], xyzrpy[3:], self.last_joint_state)
         safe, violating_joint_name = self.kinematic_solver.is_joint_state_safe(joint_states)
+        '''
         if(error >= self.max_error_thresh):
             self.get_logger().warn(f"IK Error {error} > {self.max_error_thresh} treshold. Not publishing joint state", throttle_duration_sec=2.0)
             self.get_logger().warn(f"Arm state: {xyzrpy}", throttle_duration_sec=2.0)
             self.arm_state = arm_backup
             return
-        elif not safe:
+        '''
+        if not safe:
             self.get_logger().warn(f"Unsafe IK solution. {violating_joint_name} in unsafe position. Not publishing joint state.", throttle_duration_sec=2.0)
             self.get_logger().warn(f"Arm state: {xyzrpy}", throttle_duration_sec=2.0)
             self.arm_state = arm_backup
