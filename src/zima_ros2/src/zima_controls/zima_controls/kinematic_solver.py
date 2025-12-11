@@ -22,7 +22,7 @@ class KinematicSolver:
         self.revolute_links = [link for link in self.links if link['type']=='revolute']
         self.orientation_weight = 0.05
         self.translation_weight = 1.0
-        self.joint_weight = 0.3
+        self.joint_weight = 0.1
         self.kd_precision = 4
         self.kd_tree, self.joint_LUT = self.create_kd_tree(fk_sample_count)
         self.max_reach = sum([np.linalg.norm(link['translation']) for link in self.links])
