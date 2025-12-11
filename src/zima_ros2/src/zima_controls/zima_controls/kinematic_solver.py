@@ -106,14 +106,15 @@ class KinematicSolver:
         '''
         if current_joint_state is not None and len(current_joint_state) != len(self.revolute_links):
             raise Exception(f"Cannot solve for more than {len(self.revolute_links)} joint states!")
-        weighted_xyzrpy = np.concatenate((xyz*self.translation_weight, rpy*self.orientation_weight))
-        warm_start_error, best_point_index = self.kd_tree.query(weighted_xyzrpy)
-        closest_xyzrpy = self.kd_tree.data[best_point_index]
 
-        joint_state_warm_start = self.joint_LUT[tuple(closest_xyzrpy)]
+        estimate = current_joint_state
+        if current_joint_state is None:
+            weighted_xyzrpy = np.concatenate((xyz*self.translation_weight, rpy*self.orientation_weight))
+            warm_start_error, best_point_index = self.kd_tree.query(weighted_xyzrpy)
+            closest_xyzrpy = self.kd_tree.data[best_point_index]
+            estimate = self.joint_LUT[tuple(closest_xyzrpy)]
         
         i=0
-        estimate = np.array(joint_state_warm_start)
         while i < max_iters:
             current_error = self.calculate_joint_state_error(estimate, xyz, rpy, current_joint_state)
             if np.linalg.norm(current_error) <= eps:
