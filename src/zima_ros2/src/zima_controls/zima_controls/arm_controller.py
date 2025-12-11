@@ -57,6 +57,7 @@ class ArmController(Node):
         if arm_safety_path == '':
             arm_safety_path = None
         self.max_error_thresh = self.get_parameter('max_error_thresh').value
+        self.last_joint_state = None
 
         with open(denorm_path, 'r') as f:
             denorm_data = yaml.safe_load(f)
@@ -91,7 +92,7 @@ class ArmController(Node):
         self.arm_state.step(msg)
 
         xyzrpy = self.arm_state.to_xyzrpy()
-        joint_states, error, iterations = self.kinematic_solver.solve(xyzrpy[:3], xyzrpy[3:])
+        joint_states, error, iterations = self.kinematic_solver.solve(xyzrpy[:3], xyzrpy[3:], self.last_joint_state)
         safe, violating_joint_name = self.kinematic_solver.is_joint_state_safe(joint_states)
         if(error >= self.max_error_thresh):
             self.get_logger().warn(f"IK Error {error} > {self.max_error_thresh} treshold. Not publishing joint state", throttle_duration_sec=2.0)
@@ -101,7 +102,8 @@ class ArmController(Node):
             self.get_logger().warn(f"Unsafe IK solution. {violating_joint_name} in unsafe position. Not publishing joint state.", throttle_duration_sec=2.0)
             self.get_logger().warn(f"Arm state: {xyzrpy}", throttle_duration_sec=2.0)
             return
-            
+
+        self.last_joint_state = joint_states
         total_joint_angles = list(joint_states) + [self.arm_state.gripper]
 
         joint_state = JointState()
