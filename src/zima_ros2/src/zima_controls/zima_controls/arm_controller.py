@@ -90,7 +90,7 @@ class ArmController(Node):
         self.joint_state_pub = self.create_publisher(JointState, '/goal_joint_state', 10)
 
     def delta_callback(self, msg: ArmStateDelta):
-        arm_backup = copy.copy(self.armstate)
+        arm_backup = copy.copy(self.arm_state)
         self.arm_state.step(msg)
 
         xyzrpy = self.arm_state.to_xyzrpy()
