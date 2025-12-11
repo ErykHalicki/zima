@@ -22,8 +22,8 @@ class KinematicSolver:
         self.revolute_links = [link for link in self.links if link['type']=='revolute']
         self.orientation_weight = 0.05
         self.translation_weight = 1.0
-        self.joint_weight = 0.1
-        self.kd_precision = 2
+        self.joint_weight = 0.3
+        self.kd_precision = 4
         self.kd_tree, self.joint_LUT = self.create_kd_tree(fk_sample_count)
         self.max_reach = sum([np.linalg.norm(link['translation']) for link in self.links])
         
@@ -78,7 +78,8 @@ class KinematicSolver:
         total_weighted_errors = np.concatenate((weighted_translation_errors, weighted_orientation_errors))
         total_weighted_errors*=self.dimension_mask
         if current_joint_state is not None:
-            weighted_joint_errors = (np.array(current_joint_state) - joint_state) * self.joint_weight
+            joint_errors = (np.array(current_joint_state) - joint_state) 
+            weighted_joint_errors = joint_errors  * self.joint_weight #keep sign but punish large changes in just one axis
             total_weighted_errors = np.concatenate((total_weighted_errors, weighted_joint_errors))
         return total_weighted_errors
 
@@ -97,7 +98,7 @@ class KinematicSolver:
             jacobian[:,i] = (plus_h_error - minus_h_error) / (2*h) # ith column corresponds to the ith joints partial derivatives of error
         return jacobian
 
-    def solve(self, xyz, rpy=[0,0,0], current_joint_state = None, eps=0.01, max_iters=20, step_size=0.2):
+    def solve(self, xyz, rpy=[0,0,0], current_joint_state = None, eps=0.01, max_iters=20, step_size=0.1):
         '''
         xyz: numpy array of desired xyz
         rpy: numpy array of desired roll pitch yaw
