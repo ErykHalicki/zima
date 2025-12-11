@@ -123,14 +123,16 @@ def visualize_interactive(solver, initial_joints=None, joint_mode=False):
 
     else:
         initial_pose = [0.0, 0.0, 0.1, 0.0, 0.0, 0.0]
+        joints = [0.0] * len(solver.revolute_links)
 
         fig = plt.figure(figsize=(12, 8))
         ax = fig.add_subplot(111, projection='3d')
         plt.subplots_adjust(bottom=0.35)
 
         def update_arm_ik(pose):
+            nonlocal joints
             ax.clear()
-            joints, error, iterations = solver.solve(np.array(pose[:3]), np.array(pose[3:]))
+            joints, error, iterations = solver.solve(np.array(pose[:3]), np.array(pose[3:]), joints)
             if joints is not None:
                 transforms = solver.forward(joints)
                 points = np.array([t[:3, 3] for t in transforms])
@@ -156,7 +158,7 @@ def visualize_interactive(solver, initial_joints=None, joint_mode=False):
             if hasattr(solver, 'safety_boxes'):
                 _draw_safety_boxes(ax, solver.safety_boxes)
 
-            max_range = 0.2
+            max_range = 0.3
             ax.set_xlim([-max_range, max_range])
             ax.set_ylim([-max_range, max_range])
             ax.set_zlim([-max_range, max_range])
@@ -165,7 +167,7 @@ def visualize_interactive(solver, initial_joints=None, joint_mode=False):
 
         sliders = []
         slider_labels = ['X', 'Y', 'Z', 'Roll', 'Pitch', 'Yaw']
-        slider_ranges = [(0.0, 0.30), (-0.2, 0.2), (-0.2, 0.2), (-np.pi, np.pi), (-np.pi, np.pi), (-np.pi, np.pi)]
+        slider_ranges = [(0.0, 0.30), (-0.3, 0.3), (-0.3, 0.3), (-np.pi, np.pi), (-np.pi, np.pi), (-np.pi, np.pi)]
 
         for i in range(6):
             ax_slider = plt.axes([0.1, 0.25 - i*0.04, 0.8, 0.02])
