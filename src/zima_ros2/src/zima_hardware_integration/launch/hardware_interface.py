@@ -19,7 +19,7 @@ def generate_launch_description():
     
     update_rate_arg = DeclareLaunchArgument(
         'hardware_update_rate',
-        default_value='40.0',
+        default_value='200.0',
         description='Rate (Hz) at which to read from serial port'
     )
 

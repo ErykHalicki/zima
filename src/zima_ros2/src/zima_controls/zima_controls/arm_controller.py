@@ -6,6 +6,7 @@ from zima_controls.kinematic_solver import KinematicSolver
 from rclpy.node import Node
 from std_msgs.msg import Empty
 import rclpy
+import copy
 
 class ArmState:
     def __init__(self, x=0.0, y=0.0, z=0.0, roll=0.0, pitch=0.0, yaw=0.0, gripper=0.0, denorm_coeffs=None, limits=None):
@@ -29,12 +30,12 @@ class ArmState:
         self.gripper += max(-1, min(1, delta.gripper)) * self.denorm_coeffs['gripper']
 
         if self.limits:
-            self.x = max(self.limits['translation']['min'], min(self.limits['translation']['max'], self.x))
-            self.y = max(self.limits['translation']['min'], min(self.limits['translation']['max'], self.y))
-            self.z = max(self.limits['translation']['min'], min(self.limits['translation']['max'], self.z))
-            self.roll = max(self.limits['rotation']['min'], min(self.limits['rotation']['max'], self.roll))
-            self.pitch = max(self.limits['rotation']['min'], min(self.limits['rotation']['max'], self.pitch))
-            self.yaw = max(self.limits['rotation']['min'], min(self.limits['rotation']['max'], self.yaw))
+            self.x = max(self.limits['x']['min'], min(self.limits['x']['max'], self.x))
+            self.y = max(self.limits['y']['min'], min(self.limits['y']['max'], self.y))
+            self.z = max(self.limits['z']['min'], min(self.limits['z']['max'], self.z))
+            self.roll = max(self.limits['roll']['min'], min(self.limits['roll']['max'], self.roll))
+            self.pitch = max(self.limits['pitch']['min'], min(self.limits['pitch']['max'], self.pitch))
+            self.yaw = max(self.limits['yaw']['min'], min(self.limits['yaw']['max'], self.yaw))
             self.gripper = max(self.limits['gripper']['min'], min(self.limits['gripper']['max'], self.gripper))
 
     def to_xyzrpy(self):
@@ -57,6 +58,7 @@ class ArmController(Node):
         if arm_safety_path == '':
             arm_safety_path = None
         self.max_error_thresh = self.get_parameter('max_error_thresh').value
+        self.last_joint_state = None
 
         with open(denorm_path, 'r') as f:
             denorm_data = yaml.safe_load(f)
@@ -88,20 +90,26 @@ class ArmController(Node):
         self.joint_state_pub = self.create_publisher(JointState, '/goal_joint_state', 10)
 
     def delta_callback(self, msg: ArmStateDelta):
+        arm_backup = copy.copy(self.arm_state)
         self.arm_state.step(msg)
 
         xyzrpy = self.arm_state.to_xyzrpy()
-        joint_states, error, iterations = self.kinematic_solver.solve(xyzrpy[:3], xyzrpy[3:])
+        joint_states, error, iterations = self.kinematic_solver.solve(xyzrpy[:3], xyzrpy[3:], self.last_joint_state)
         safe, violating_joint_name = self.kinematic_solver.is_joint_state_safe(joint_states)
+        '''
         if(error >= self.max_error_thresh):
             self.get_logger().warn(f"IK Error {error} > {self.max_error_thresh} treshold. Not publishing joint state", throttle_duration_sec=2.0)
             self.get_logger().warn(f"Arm state: {xyzrpy}", throttle_duration_sec=2.0)
+            self.arm_state = arm_backup
             return
-        elif not safe:
+        '''
+        if not safe:
             self.get_logger().warn(f"Unsafe IK solution. {violating_joint_name} in unsafe position. Not publishing joint state.", throttle_duration_sec=2.0)
             self.get_logger().warn(f"Arm state: {xyzrpy}", throttle_duration_sec=2.0)
+            self.arm_state = arm_backup
             return
-            
+
+        self.last_joint_state = joint_states
         total_joint_angles = list(joint_states) + [self.arm_state.gripper]
 
         joint_state = JointState()
@@ -113,6 +121,7 @@ class ArmController(Node):
 
     def reset_callback(self, msg: Empty):
         self.arm_state = ArmState(*self.initial_state, gripper=0.0, denorm_coeffs=self.denorm_coeffs, limits=self.limits)
+        self.last_joint_state = None
         self.get_logger().info('Arm state reset to initial pose')
 
 def main(args=None):

@@ -22,6 +22,7 @@ class KinematicSolver:
         self.revolute_links = [link for link in self.links if link['type']=='revolute']
         self.orientation_weight = 0.05
         self.translation_weight = 1.0
+        self.joint_weight = 0.1
         self.kd_precision = 4
         self.kd_tree, self.joint_LUT = self.create_kd_tree(fk_sample_count)
         self.max_reach = sum([np.linalg.norm(link['translation']) for link in self.links])
@@ -70,49 +71,56 @@ class KinematicSolver:
             T.append(T[-1]@T_link)
         return T
 
-    def calculate_joint_state_error(self, joint_state, target_xyz, target_rpy):
+    def calculate_joint_state_error(self, joint_state, target_xyz, target_rpy, current_joint_state=None):
         T = self.forward(joint_state)[-1]
         weighted_orientation_errors = (target_rpy - self.transformation_matrix_to_euler(T)) * self.orientation_weight
         weighted_translation_errors = (target_xyz - self.transformation_matrix_to_translation(T)) * self.translation_weight
         total_weighted_errors = np.concatenate((weighted_translation_errors, weighted_orientation_errors))
         total_weighted_errors*=self.dimension_mask
+        if current_joint_state is not None:
+            joint_errors = (np.array(current_joint_state) - joint_state) 
+            weighted_joint_errors = joint_errors  * self.joint_weight #keep sign but punish large changes in just one axis
+            total_weighted_errors = np.concatenate((total_weighted_errors, weighted_joint_errors))
         return total_weighted_errors
 
-    def estimate_jacobian(self, joint_state, target_xyz, target_rpy, h=np.radians(2)): # default of 2 degrees
-        jacobian = np.empty((6,len(joint_state)))
+    def estimate_jacobian(self, joint_state, target_xyz, target_rpy, current_joint_state=None, h=np.radians(2)): # default of 2 degrees
+        error_dim = 6 
+        if current_joint_state is not None:
+            error_dim += len(self.revolute_links)
+        jacobian = np.empty((error_dim,len(joint_state)))
         for i in range(len(joint_state)):
             joint_state_plus = joint_state.copy()
             joint_state_minus = joint_state.copy()
             joint_state_plus[i] += h
             joint_state_minus[i] -= h
-            plus_h_error = self.calculate_joint_state_error(joint_state_plus, target_xyz, target_rpy)
-            minus_h_error = self.calculate_joint_state_error(joint_state_minus, target_xyz, target_rpy)
-            jacobian[:,i] = (plus_h_error - minus_h_error) / 2*h # ith column corresponds to the ith joints partial derivatives of error
+            plus_h_error = self.calculate_joint_state_error(joint_state_plus, target_xyz, target_rpy, current_joint_state)
+            minus_h_error = self.calculate_joint_state_error(joint_state_minus, target_xyz, target_rpy, current_joint_state)
+            jacobian[:,i] = (plus_h_error - minus_h_error) / (2*h) # ith column corresponds to the ith joints partial derivatives of error
         return jacobian
 
-    def solve(self, xyz, rpy=[0,0,0], current_joint_state = None, eps=0.005, max_iters=15, step_size=0.0005):
+    def solve(self, xyz, rpy=[0,0,0], current_joint_state = None, eps=0.01, max_iters=20, step_size=0.1):
         '''
         xyz: numpy array of desired xyz
         rpy: numpy array of desired roll pitch yaw
+        current_joint_state: if provided will also optimze for minimum joint difference
         '''
         if current_joint_state is not None and len(current_joint_state) != len(self.revolute_links):
             raise Exception(f"Cannot solve for more than {len(self.revolute_links)} joint states!")
-        weighted_xyzrpy = np.concatenate((xyz*self.translation_weight, rpy*self.orientation_weight))
-        warm_start_error, best_point_index = self.kd_tree.query(weighted_xyzrpy)
-        closest_xyzrpy = self.kd_tree.data[best_point_index]
 
-        joint_state_warm_start = self.joint_LUT[tuple(closest_xyzrpy)]
+        estimate = current_joint_state
+        if current_joint_state is None:
+            weighted_xyzrpy = np.concatenate((xyz*self.translation_weight, rpy*self.orientation_weight))
+            warm_start_error, best_point_index = self.kd_tree.query(weighted_xyzrpy)
+            closest_xyzrpy = self.kd_tree.data[best_point_index]
+            estimate = self.joint_LUT[tuple(closest_xyzrpy)]
         
         i=0
-        estimate = np.array(joint_state_warm_start)
-        current_error = warm_start_error
         while i < max_iters:
-            current_error = self.calculate_joint_state_error(estimate,xyz,rpy)
+            current_error = self.calculate_joint_state_error(estimate, xyz, rpy, current_joint_state)
             if np.linalg.norm(current_error) <= eps:
-                #print(f"solved with {i} iterations")
                 break # solution is good enough
-            jacobian = self.estimate_jacobian(estimate, xyz,rpy)
-            estimate += step_size * np.linalg.pinv(jacobian) @ -current_error
+            jacobian = self.estimate_jacobian(estimate, xyz,rpy, current_joint_state)
+            estimate += step_size * np.linalg.pinv(jacobian) @ -current_error # (joint_dim, error_dim) @ (error_dim, 1)
             estimate = self.clamp_joints(estimate)
             i+=1
         else:
@@ -159,6 +167,7 @@ class KinematicSolver:
             weighted_xyzrpy*=self.dimension_mask
             joint_LUT[tuple(weighted_xyzrpy)] = sample
             kd_tree_data[i] = weighted_xyzrpy
+        print(len(joint_LUT))
         #print(f"fk sampling took {time.time() - fk_start}")
         kd_tree_data*= self.dimension_mask
         
@@ -198,5 +207,5 @@ if __name__ == '__main__':
         visualize_arm([true_joint_positions, ik_joint_positions])
     '''
 
-    visualize_interactive(solver, joint_mode=True)
+    visualize_interactive(solver, joint_mode=False)
     

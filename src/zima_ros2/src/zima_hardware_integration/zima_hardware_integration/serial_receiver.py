@@ -5,6 +5,7 @@ from sensor_msgs.msg import JointState
 from zima_msgs.msg import HardwareStatus, EncoderData, ServoPositions
 import serial
 import re
+import math
 
 class SerialReceiverNode(Node):
     def __init__(self):
@@ -29,20 +30,20 @@ class SerialReceiverNode(Node):
         # Create publishers
         self.hardware_status_pub = self.create_publisher(
             HardwareStatus, 
-            'hardware_status', 
+            '/hardware_status', 
             10
         )
         
         self.encoder_data_pub = self.create_publisher(
             EncoderData,
-            'encoder_data',
+            '/encoder_data',
             10
         )
         
         # Joint state publisher for RViz visualization
         self.joint_states_pub = self.create_publisher(
             JointState,
-            'current_servo_positions',
+            '/current_joint_state',
             10
         )
         
@@ -150,11 +151,11 @@ class SerialReceiverNode(Node):
         """Publish joint states from servo positions."""
         # Define joint names 
         joint_names = [
-            'base_joint',       # Base rotation 
-            'shoulder_joint',   # Shoulder pitch
-            'elbow_joint',      # Elbow pitch
-            'hand_joint',       # Hand pitch
-            'wrist_joint',      # Wrist rotation
+            'base',        
+            'shoulder',   
+            'elbow',      
+            'wrist',      
+            'gripper',      
         ]
         
         # Ensure we have enough servo positions
@@ -163,13 +164,14 @@ class SerialReceiverNode(Node):
             joint_msg.header = self.create_header()
             joint_msg.name = joint_names
             
-            # You might need to adjust this conversion based on your actual servo range
             joint_msg.position = [
-                float(pos - 90.0) for pos in servo_positions[:len(joint_names)]
+                math.radians(float(pos)-90) for pos in servo_positions[:len(joint_names)+1]
             ]
+
+            joint_msg.position.pop(1) # servo 1 and 2 are redundant
+            joint_msg.position[2] *= -1 #servo 3 / joint 2 is sent inverted from microcontroller FIXME
             
-            # Publish joint states
-            self.joint_states_pub.publish(joint_msg)#published from -90 to 90
+            self.joint_states_pub.publish(joint_msg)#published from -pi/2 to pi/2
     
     def destroy_node(self):
         """Clean up when node is shutting down."""

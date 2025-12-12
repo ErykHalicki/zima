@@ -24,7 +24,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'arm_controller = zima_controls.arm_controller:main'
+            'arm_controller = zima_controls.arm_controller:main',
+            'arm_visualization_node = zima_controls.arm_visualization_node:main'
         ],
     },
 )
