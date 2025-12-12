@@ -88,7 +88,7 @@ public:
                 if (angle != -1){
                     goal[motorIndex] = 180 - angle;
                 }
-                else{ 
+                else{
                     goal[motorIndex] = -1;
                 }
             }
