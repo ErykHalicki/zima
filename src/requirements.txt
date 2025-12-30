@@ -5,3 +5,4 @@ pynput
 h5py
 torch
 torchvision
+lerobot
