@@ -9,15 +9,29 @@ class ZimaRobot(Robot):
         super().__init__(config)
 
     @property
-    def _motors_ft(self) -> dict[str, type]:
+    def _action_ft(self) -> dict[str, type]:
         return {
-            "track_left.pos": float, #TODO rename to be better
-            "track_right.pos": float,
-            "joint_1.pos": float,
-            "joint_2.pos": float,
-            "joint_3.pos": float,
-            "joint_4.pos": float,
-            "joint_5.pos": float,
+            "tracks.left_vel": float, 
+            "tracks.right_vel": float,
+            "arm.pos.delta_x" : float,
+            "arm.pos.delta_y" : float,
+            "arm.pos.delta_z" : float,
+            "arm.rot.delta_x" : float,
+            "arm.rot.delta_y" : float,
+            "arm.rot.delta_z" : float,
+            "arm.gripper.delta" : float,
+        }
+
+    @property
+    def _joint_ft(self) -> dict[str, type]:
+        return {
+            "tracks.left_vel": float, 
+            "tracks.right_vel": float,
+            "joint1.pos": float, 
+            "joint2.pos": float, 
+            "joint3.pos": float, 
+            "joint4.pos": float, 
+            "joint5.pos": float, 
         }
 
     @property
@@ -29,9 +43,9 @@ class ZimaRobot(Robot):
 
     @property
     def observation_features(self) -> dict:
-        return {**self._motors_ft, **self._cameras_ft}
+        return {**self._joint_ft, **self._cameras_ft}
 
     @property
     def action_features(self) -> dict:
-        return self._motors_ft
+        return self._action_ft
 
