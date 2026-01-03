@@ -29,6 +29,7 @@ setup(
             "joy_control=zima_hardware_integration.joy_control:main",
             "joy_tester=zima_hardware_integration.joy_tester:main",
             "camera_driver=zima_hardware_integration.camera_driver:main",
+            "tcp_interface=zima_hardware_integration.tcp_interface:main",
         ],
     },
 )

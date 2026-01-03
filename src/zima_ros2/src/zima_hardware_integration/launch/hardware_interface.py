@@ -68,14 +68,33 @@ def generate_launch_description():
         output='screen'
     )
 
-    camera_driver_node = Node(
+    wrist_camera_node = Node(
         package='zima_hardware_integration',
         executable='camera_driver',
-        name='camera_publisher',
+        name='wrist_camera_publisher',
         parameters=[{
+            'camera_device': 0,
             'output_width': LaunchConfiguration('output_width'),
             'output_height': LaunchConfiguration('output_height')
         }],
+        remappings=[
+            ('camera/image_raw/compressed', 'wrist_cam/image_raw/compressed')
+        ],
+        output='screen'
+    )
+
+    front_camera_node = Node(
+        package='zima_hardware_integration',
+        executable='camera_driver',
+        name='front_camera_publisher',
+        parameters=[{
+            'camera_device': 1,
+            'output_width': LaunchConfiguration('output_width'),
+            'output_height': LaunchConfiguration('output_height')
+        }],
+        remappings=[
+            ('camera/image_raw/compressed', 'front_cam/image_raw/compressed')
+        ],
         output='screen'
     )
 
@@ -89,5 +108,6 @@ def generate_launch_description():
         serial_receiver_node,
         serial_sender_node,
         command_generator_node,
-        camera_driver_node
+        wrist_camera_node,
+        front_camera_node
     ])

@@ -45,8 +45,8 @@ class CameraPublisher(Node):
         self.get_logger().info(f'Opening camera device: {camera_device}')
         self.cap = cv2.VideoCapture(camera_device, cv2.CAP_V4L2)
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M','J','P','G'))
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         self.cap.set(cv2.CAP_PROP_FPS, 25)
 
         actual_fps = self.cap.get(cv2.CAP_PROP_FPS)
@@ -57,11 +57,9 @@ class CameraPublisher(Node):
         
         self.get_logger().info('Camera opened, publishing to /camera/image_raw/compressed')
         
-        # Start capture thread
         self.capture_thread = threading.Thread(target=self.capture_loop, daemon=True)
         self.capture_thread.start()
         
-        # Publish on timer for stable rate
         self.timer = self.create_timer(1./actual_fps, self.publish_frame)
     
     def capture_loop(self):
