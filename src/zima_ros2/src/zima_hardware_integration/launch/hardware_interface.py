@@ -98,7 +98,18 @@ def generate_launch_description():
         output='screen'
     )
 
-    # Create and return launch description
+    tcp_interface_node = Node(
+        package='zima_hardware_integration',
+        executable='tcp_interface',
+        name='tcp_interface_node',
+        parameters=[{
+            'tcp_port': 5000,
+            'tcp_host': '0.0.0.0',
+            'max_speed': 210
+        }],
+        output='screen'
+    )
+
     return LaunchDescription([
         serial_port_arg,
         baud_rate_arg,
@@ -109,5 +120,6 @@ def generate_launch_description():
         serial_sender_node,
         command_generator_node,
         wrist_camera_node,
-        front_camera_node
+        front_camera_node,
+        tcp_interface_node
     ])
