@@ -22,14 +22,7 @@ def generate_launch_description():
         )
     )
 
-    nn_controller_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(zima_ml_dir, 'launch', 'nn_controller.launch.py')
-        )
-    )
-
     return LaunchDescription([
         arm_control_launch,
         hardware_interface_launch,
-        nn_controller_launch
     ])
