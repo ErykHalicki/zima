@@ -88,7 +88,7 @@ def generate_launch_description():
         executable='camera_driver',
         name='front_camera_publisher',
         parameters=[{
-            'camera_device': 1,
+            'camera_device': 2,
             'output_width': LaunchConfiguration('output_width'),
             'output_height': LaunchConfiguration('output_height')
         }],
