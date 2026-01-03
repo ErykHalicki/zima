@@ -15,6 +15,7 @@ class ZimaRobot(Robot):
         super().__init__(config)
         self.socket = None
         self._connected = False
+        self.config = config
 
     @property
     def _joint_ft(self) -> dict[str, type]:

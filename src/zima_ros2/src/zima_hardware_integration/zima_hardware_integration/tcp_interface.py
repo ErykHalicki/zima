@@ -227,41 +227,48 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
     node: Optional[TCPInterfaceNode] = None
 
     def handle(self):
-        try:
-            data = self.request.recv(1024*1024*10).decode('utf-8')
+        while True:
+            try:
+                data = self.request.recv(1024*1024*10).decode('utf-8')
 
-            if not data:
-                return
+                if not data:
+                    break
 
-            request = json.loads(data)
-            command = request.get('command')
+                request = json.loads(data)
+                command = request.get('command')
 
-            if command == 'get_observation':
-                response = self._handle_get_observation()
-            elif command == 'send_action':
-                response = self._handle_send_action(request.get('data', {}))
-            else:
-                response = {
+                if command == 'get_observation':
+                    response = self._handle_get_observation()
+                elif command == 'send_action':
+                    response = self._handle_send_action(request.get('data', {}))
+                else:
+                    response = {
+                        'status': 'error',
+                        'message': f'Unknown command: {command}'
+                    }
+
+                response_str = json.dumps(response)
+                self.request.sendall(response_str.encode('utf-8'))
+
+            except json.JSONDecodeError as e:
+                error_response = {
                     'status': 'error',
-                    'message': f'Unknown command: {command}'
+                    'message': f'Invalid JSON: {str(e)}'
                 }
-
-            response_str = json.dumps(response)
-            self.request.sendall(response_str.encode('utf-8'))
-
-        except json.JSONDecodeError as e:
-            error_response = {
-                'status': 'error',
-                'message': f'Invalid JSON: {str(e)}'
-            }
-            self.request.sendall(json.dumps(error_response).encode('utf-8'))
-        except Exception as e:
-            self.node.get_logger().error(f'Error handling TCP request: {e}')
-            error_response = {
-                'status': 'error',
-                'message': str(e)
-            }
-            self.request.sendall(json.dumps(error_response).encode('utf-8'))
+                try:
+                    self.request.sendall(json.dumps(error_response).encode('utf-8'))
+                except:
+                    break
+            except Exception as e:
+                self.node.get_logger().error(f'Error handling TCP request: {e}')
+                error_response = {
+                    'status': 'error',
+                    'message': str(e)
+                }
+                try:
+                    self.request.sendall(json.dumps(error_response).encode('utf-8'))
+                except:
+                    break
 
     def _handle_get_observation(self) -> Dict[str, Any]:
         try:
@@ -288,7 +295,8 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
                 'status': 'error',
                 'message': f'Failed to send action: {str(e)}'
             }
-
+    
+    # add handle_reset
 
 def main(args=None):
     rclpy.init(args=args)
