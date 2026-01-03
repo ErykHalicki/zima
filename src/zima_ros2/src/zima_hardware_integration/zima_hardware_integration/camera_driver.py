@@ -19,10 +19,12 @@ class CameraPublisher(Node):
         self.frame_lock = threading.Lock()
         self.running = True
 
+        self.declare_parameter('camera_device', 0)
         self.declare_parameter('output_width', -1)
         self.declare_parameter('output_height', -1)
         self.declare_parameter('contrast', 1.0)
 
+        camera_device = self.get_parameter('camera_device').get_parameter_value().integer_value
         output_width = self.get_parameter('output_width').get_parameter_value().integer_value
         output_height = self.get_parameter('output_height').get_parameter_value().integer_value
         self.contrast = self.get_parameter('contrast').get_parameter_value().double_value
@@ -39,17 +41,18 @@ class CameraPublisher(Node):
             self.get_logger().info('Image downscaling disabled')
 
         self.get_logger().info(f'Contrast adjustment: {self.contrast}')
-        
-        self.cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
+
+        self.get_logger().info(f'Opening camera device: {camera_device}')
+        self.cap = cv2.VideoCapture(camera_device, cv2.CAP_V4L2)
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M','J','P','G'))
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         self.cap.set(cv2.CAP_PROP_FPS, 25)
-        
+
         actual_fps = self.cap.get(cv2.CAP_PROP_FPS)
 
         if not self.cap.isOpened():
-            self.get_logger().error('Failed to open camera')
+            self.get_logger().error(f'Failed to open camera device: {camera_device}')
             return
         
         self.get_logger().info('Camera opened, publishing to /camera/image_raw/compressed')

@@ -27,7 +27,6 @@ class SerialReceiverNode(Node):
         self.serial_port = None
         self.connect_to_serial(serial_port, baud_rate, timeout)
         
-        # Create publishers
         self.hardware_status_pub = self.create_publisher(
             HardwareStatus, 
             '/hardware_status', 
@@ -40,14 +39,12 @@ class SerialReceiverNode(Node):
             10
         )
         
-        # Joint state publisher for RViz visualization
         self.joint_states_pub = self.create_publisher(
             JointState,
             '/current_joint_state',
             10
         )
         
-        # Create timer for periodic reading
         period = 1.0 / update_rate
         self.timer = self.create_timer(period, self.read_serial_data)
         
@@ -55,19 +52,17 @@ class SerialReceiverNode(Node):
     
     def connect_to_serial(self, port, baud_rate, timeout):
         """Attempt to connect to the serial port."""
-        # Try the specified port
         try:
             self.serial_port = serial.Serial(port, baud_rate, timeout=timeout)
             self.get_logger().info(f"Connected to serial port: {port}")
             return
         except serial.SerialException as e:
             self.get_logger().error(f"Failed to open serial port {port}: {e}")
-        
-        # If the specified port failed, try common alternatives
+
         alternate_ports = ['/dev/ttyUSB0', '/dev/ttyACM0', '/dev/ttyUSB1', '/dev/ttyACM1']
         for alt_port in alternate_ports:
             if alt_port == port:
-                continue  # Skip the already tried port
+                continue  
             
             try:
                 self.serial_port = serial.Serial(alt_port, baud_rate, timeout=timeout)
@@ -100,10 +95,8 @@ class SerialReceiverNode(Node):
         # Format: ZIMA:DATA:CLICKSLEFT=<value>,CLICKSRIGHT=<value>,SERVOS=<pos1>|<pos2>|...|<pos8>
         
         try:
-            # Remove prefix
             data_part = data_line[len('ZIMA:DATA:'):]
             
-            # Extract encoder data
             left_clicks_match = re.search(r'CLICKSLEFT=(-?\d+)', data_part)
             right_clicks_match = re.search(r'CLICKSRIGHT=(-?\d+)', data_part)
             
@@ -111,14 +104,12 @@ class SerialReceiverNode(Node):
                 left_clicks = int(left_clicks_match.group(1))
                 right_clicks = int(right_clicks_match.group(1))
                 
-                # Publish encoder data
                 encoder_msg = EncoderData()
                 encoder_msg.header = self.create_header()
                 encoder_msg.left_clicks = left_clicks
                 encoder_msg.right_clicks = right_clicks
                 self.encoder_data_pub.publish(encoder_msg)
             
-            # Extract servo positions
             servo_match = re.search(r'SERVOS=([-\d.|]+)', data_part)
             if servo_match:
                 servo_str = servo_match.group(1)
@@ -126,7 +117,6 @@ class SerialReceiverNode(Node):
                 
                 self.publish_joint_states(servo_positions)
             
-            # Publish complete hardware status
             status_msg = HardwareStatus()
             status_msg.header = self.create_header()
             if left_clicks_match and right_clicks_match:
