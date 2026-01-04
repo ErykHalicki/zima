@@ -20,11 +20,15 @@ class CameraPublisher(Node):
         self.running = True
 
         self.declare_parameter('camera_device', 0)
+        self.declare_parameter('input_width', 1920)
+        self.declare_parameter('input_height', 1080)
         self.declare_parameter('output_width', -1)
         self.declare_parameter('output_height', -1)
         self.declare_parameter('contrast', 1.0)
 
         camera_device = self.get_parameter('camera_device').get_parameter_value().integer_value
+        input_width = self.get_parameter('input_width').get_parameter_value().integer_value
+        input_height = self.get_parameter('input_height').get_parameter_value().integer_value
         output_width = self.get_parameter('output_width').get_parameter_value().integer_value
         output_height = self.get_parameter('output_height').get_parameter_value().integer_value
         self.contrast = self.get_parameter('contrast').get_parameter_value().double_value
@@ -43,19 +47,18 @@ class CameraPublisher(Node):
         self.get_logger().info(f'Contrast adjustment: {self.contrast}')
 
         self.get_logger().info(f'Opening camera device: {camera_device}')
+        self.get_logger().info(f'Camera input resolution: {input_width}x{input_height}')
         self.cap = cv2.VideoCapture(camera_device, cv2.CAP_V4L2)
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M','J','P','G'))
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-        self.cap.set(cv2.CAP_PROP_FPS, 25)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, input_width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, input_height)
+        self.cap.set(cv2.CAP_PROP_FPS, 15)
 
         actual_fps = self.cap.get(cv2.CAP_PROP_FPS)
 
         if not self.cap.isOpened():
             self.get_logger().error(f'Failed to open camera device: {camera_device}')
             return
-        
-        self.get_logger().info('Camera opened, publishing to /camera/image_raw/compressed')
         
         self.capture_thread = threading.Thread(target=self.capture_loop, daemon=True)
         self.capture_thread.start()
@@ -91,6 +94,9 @@ class CameraPublisher(Node):
             l = cv2.convertScaleAbs(l, alpha=self.contrast, beta=0)
             lab = cv2.merge([l, a, b])
             frame = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         return frame
 

@@ -74,6 +74,8 @@ def generate_launch_description():
         name='wrist_camera_publisher',
         parameters=[{
             'camera_device': 0,
+            'input_width': 1920,
+            'input_height': 1080,
             'output_width': LaunchConfiguration('output_width'),
             'output_height': LaunchConfiguration('output_height')
         }],
@@ -89,6 +91,8 @@ def generate_launch_description():
         name='front_camera_publisher',
         parameters=[{
             'camera_device': 2,
+            'input_width': 2048,
+            'input_height': 1536,
             'output_width': LaunchConfiguration('output_width'),
             'output_height': LaunchConfiguration('output_height')
         }],
