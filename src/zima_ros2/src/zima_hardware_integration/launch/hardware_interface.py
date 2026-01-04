@@ -73,7 +73,7 @@ def generate_launch_description():
         executable='camera_driver',
         name='wrist_camera_publisher',
         parameters=[{
-            'camera_device': 0,
+            'camera_device': 2,
             'input_width': 1920,
             'input_height': 1080,
             'output_width': LaunchConfiguration('output_width'),
@@ -90,7 +90,7 @@ def generate_launch_description():
         executable='camera_driver',
         name='front_camera_publisher',
         parameters=[{
-            'camera_device': 2,
+            'camera_device': 0,
             'input_width': 2048,
             'input_height': 1536,
             'output_width': LaunchConfiguration('output_width'),
