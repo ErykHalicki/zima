@@ -1,0 +1,11 @@
+lerobot-record \
+  --robot.type=zima_robot \
+  --robot.port=5000 \
+  --robot.address 10.0.0.100 \
+  --robot.id=zima_robot \
+  --teleop.type=zima_ps3_teleop \
+  --teleop.id=zima_ps3_teleop \
+  --display_data=true \
+  --dataset.repo_id=ehalicki/zima-record-test \
+  --dataset.num_episodes=1 \
+  --dataset.single_task="test"

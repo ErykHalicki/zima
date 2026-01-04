@@ -1,6 +1,4 @@
 import pygame
-import threading
-import time
 from typing import Optional
 
 
@@ -9,7 +7,6 @@ class PS3GamepadController:
         self.deadzone = deadzone
         self.joystick: Optional[pygame.joystick.Joystick] = None
         self.running = False
-        self.update_thread: Optional[threading.Thread] = None
 
         self.left_stick_x = 0.0
         self.left_stick_y = 0.0
@@ -31,8 +28,6 @@ class PS3GamepadController:
         self.cross = 0
         self.square = 0
 
-        self.lock = threading.Lock()
-
     def start(self):
         pygame.init()
         pygame.joystick.init()
@@ -48,68 +43,68 @@ class PS3GamepadController:
         print(f"Number of buttons: {self.joystick.get_numbuttons()}")
 
         self.running = True
-        self.update_thread = threading.Thread(target=self._update_loop, daemon=True)
-        self.update_thread.start()
 
-    def _update_loop(self):
-        while self.running:
-            pygame.event.pump()
+    def update(self):
+        if not self.running:
+            return
 
-            with self.lock:
-                self.left_stick_x = self._apply_deadzone(self.joystick.get_axis(0))
-                self.left_stick_y = self._apply_deadzone(self.joystick.get_axis(1))
-                self.right_stick_x = self._apply_deadzone(self.joystick.get_axis(2))
-                self.right_stick_y = self._apply_deadzone(self.joystick.get_axis(3))
+        pygame.event.pump()
 
-                self.l2_trigger = (self.joystick.get_axis(12) + 1.0) / 2.0
-                self.r2_trigger = (self.joystick.get_axis(13) + 1.0) / 2.0
+        self.left_stick_x = self._apply_deadzone(self.joystick.get_axis(0))
+        self.left_stick_y = self._apply_deadzone(self.joystick.get_axis(1))
+        self.right_stick_x = self._apply_deadzone(self.joystick.get_axis(2))
+        self.right_stick_y = self._apply_deadzone(self.joystick.get_axis(3))
 
-                self.triangle = self.joystick.get_button(12)
-                self.circle = self.joystick.get_button(13)
-                self.cross = self.joystick.get_button(14)
-                self.square = self.joystick.get_button(15)
+        self.l2_trigger = self._normalize_trigger(self.joystick.get_axis(4))
+        self.r2_trigger = self._normalize_trigger(self.joystick.get_axis(5))
 
-                self.l1_button = self.joystick.get_button(10)
-                self.r1_button = self.joystick.get_button(11)
+        self.triangle = self.joystick.get_button(3)
+        self.circle = self.joystick.get_button(1)
+        self.cross = self.joystick.get_button(0)
+        self.square = self.joystick.get_button(2)
 
-                hat = self.joystick.get_hat(0)
-                self.dpad_left = 1 if hat[0] == -1 else 0
-                self.dpad_right = 1 if hat[0] == 1 else 0
-                self.dpad_down = 1 if hat[1] == -1 else 0
-                self.dpad_up = 1 if hat[1] == 1 else 0
+        self.l1_button = self.joystick.get_button(9)
+        self.r1_button = self.joystick.get_button(10)
 
-            time.sleep(0.01)
+        self.dpad_up = self.joystick.get_button(11)
+        self.dpad_down = self.joystick.get_button(12)
+        self.dpad_left = self.joystick.get_button(13)
+        self.dpad_right = self.joystick.get_button(14)
 
     def _apply_deadzone(self, value: float) -> float:
         if abs(value) < self.deadzone:
             return 0.0
         return value
 
+    def _normalize_trigger(self, value: float) -> float:
+        normalized = (value + 1.0) / 2.0
+        if normalized < self.deadzone:
+            return 0.0
+        return normalized
+
     def get_state(self) -> dict:
-        with self.lock:
-            return {
-                'left_stick_x': self.left_stick_x,
-                'left_stick_y': self.left_stick_y,
-                'right_stick_x': self.right_stick_x,
-                'right_stick_y': self.right_stick_y,
-                'l1': self.l1_button,
-                'r1': self.r1_button,
-                'l2': self.l2_trigger,
-                'r2': self.r2_trigger,
-                'triangle': self.triangle,
-                'circle': self.circle,
-                'cross': self.cross,
-                'square': self.square,
-                'dpad_up': self.dpad_up,
-                'dpad_down': self.dpad_down,
-                'dpad_left': self.dpad_left,
-                'dpad_right': self.dpad_right,
-            }
+        self.update()
+        return {
+            'left_stick_x': self.left_stick_x,
+            'left_stick_y': self.left_stick_y,
+            'right_stick_x': self.right_stick_x,
+            'right_stick_y': self.right_stick_y,
+            'l1': self.l1_button,
+            'r1': self.r1_button,
+            'l2': self.l2_trigger,
+            'r2': self.r2_trigger,
+            'triangle': self.triangle,
+            'circle': self.circle,
+            'cross': self.cross,
+            'square': self.square,
+            'dpad_up': self.dpad_up,
+            'dpad_down': self.dpad_down,
+            'dpad_left': self.dpad_left,
+            'dpad_right': self.dpad_right,
+        }
 
     def stop(self):
         self.running = False
-        if self.update_thread is not None:
-            self.update_thread.join(timeout=1.0)
         if self.joystick is not None:
             self.joystick.quit()
         pygame.quit()

@@ -64,3 +64,5 @@ CATKIN_IGNORE
 **.3mf
 **.stl
 **.FCBak
+
+**.egg-info**

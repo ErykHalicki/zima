@@ -95,9 +95,9 @@ class ZimaPS3Teleop(Teleoperator):
         if state['r2'] > 0.5:
             gripper_delta += 1.0
 
-        arm_delta_x = left_y * self.config.max_arm_delta
-        arm_delta_y = left_x * self.config.max_arm_delta
-        arm_delta_z = right_y * self.config.max_arm_delta
+        arm_delta_x = -left_y * self.config.max_arm_delta
+        arm_delta_y = -left_x * self.config.max_arm_delta
+        arm_delta_z = -right_y * self.config.max_arm_delta
 
         arm_rot_delta_x = -right_x * self.config.max_rotation_delta
         arm_rot_delta_y = 0.0

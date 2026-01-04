@@ -4,5 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lerobot_robot_zima_robot"
-version = "0.0.0"
-dependencies = ["lerobot"]
+version = "0.1.0"
+description = "Zima robot interface for LeRobot framework"
+requires-python = ">=3.10"
+dependencies = [
+    "lerobot",
+    "opencv-python",
+    "numpy"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lerobot_robot_zima_robot*"]

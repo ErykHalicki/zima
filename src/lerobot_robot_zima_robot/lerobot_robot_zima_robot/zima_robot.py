@@ -16,6 +16,7 @@ class ZimaRobot(Robot):
         self.socket = None
         self._connected = False
         self.config = config
+        self.cameras = [None, None]
 
     @property
     def _joint_ft(self) -> dict[str, type]:
