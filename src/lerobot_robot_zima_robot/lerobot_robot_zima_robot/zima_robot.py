@@ -74,6 +74,7 @@ class ZimaRobot(Robot):
     def disconnect(self) -> None:
         if self.socket:
             try:
+                self.reset()
                 self.socket.close()
             except Exception as e:
                 print(f"Error closing socket: {e}")
@@ -90,6 +91,16 @@ class ZimaRobot(Robot):
 
     def configure(self) -> None:
         pass
+
+    def reset(self) -> None:
+        if not self.is_connected:
+            raise ConnectionError("Robot is not connected")
+
+        request = {"command": "reset"}
+        response = self._send_tcp_request(request)
+
+        if response.get("status") != "success":
+            raise RuntimeError(f"Failed to reset arm: {response.get('message', 'Unknown error')}")
 
     def get_observation(self) -> Dict[str, Any]:
         if not self.is_connected:

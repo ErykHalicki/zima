@@ -4,6 +4,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import JointState, CompressedImage
 from zima_msgs.msg import MotorCommand, ArmStateDelta, ServoCommand
 from geometry_msgs.msg import Vector3
+from std_msgs.msg import Empty
 import socketserver
 import threading
 import json
@@ -19,7 +20,7 @@ class TCPInterfaceNode(Node):
 
         self.declare_parameter('tcp_port', 5000)
         self.declare_parameter('tcp_host', '0.0.0.0')
-        self.declare_parameter('max_speed', 255)
+        self.declare_parameter('max_speed', 210)
 
         self.tcp_port = self.get_parameter('tcp_port').get_parameter_value().integer_value
         self.tcp_host = self.get_parameter('tcp_host').get_parameter_value().string_value
@@ -69,6 +70,7 @@ class TCPInterfaceNode(Node):
         self.motor_pub = self.create_publisher(MotorCommand, '/motor_command', 10)
         self.arm_delta_pub = self.create_publisher(ArmStateDelta, '/arm_state_delta', 10)
         self.servo_pub = self.create_publisher(ServoCommand, '/servo_command', 10)
+        self.reset_arm_pub = self.create_publisher(Empty, '/reset_arm', 10)
 
         TCPRequestHandler.node = self
 
@@ -216,6 +218,24 @@ class TCPInterfaceNode(Node):
 
         self.arm_delta_pub.publish(arm_delta)
 
+    def reset(self):
+        self.get_logger().info('Arm reset activated')
+
+        for servo_id in range(8):
+            command = ServoCommand()
+            command.header.stamp = self.get_clock().now().to_msg()
+            command.servo_id = servo_id
+            if servo_id == 3:
+                command.position = 181.0
+            else:
+                command.position = -1.0
+            self.servo_pub.publish(command)
+
+        self.reset_arm_pub.publish(Empty())
+
+        self._send_motor_command(MotorCommand.MOTOR_LEFT, 0)
+        self._send_motor_command(MotorCommand.MOTOR_RIGHT, 0)
+
     def destroy_node(self):
         self.get_logger().info('Shutting down TCP server...')
         self.tcp_server.shutdown()
@@ -241,6 +261,8 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
                     response = self._handle_get_observation()
                 elif command == 'send_action':
                     response = self._handle_send_action(request.get('data', {}))
+                elif command == 'reset':
+                    response = self._handle_reset()
                 else:
                     response = {
                         'status': 'error',
@@ -295,8 +317,19 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
                 'status': 'error',
                 'message': f'Failed to send action: {str(e)}'
             }
-    
-    # add handle_reset
+
+    def _handle_reset(self) -> Dict[str, Any]:
+        try:
+            self.node.reset()
+            return {
+                'status': 'success',
+                'message': 'Arm reset successfully'
+            }
+        except Exception as e:
+            return {
+                'status': 'error',
+                'message': f'Failed to reset arm: {str(e)}'
+            }
 
 def main(args=None):
     rclpy.init(args=args)

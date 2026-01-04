@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lerobot_teleoperator_zima_ps3_teleop"
+version = "0.1.0"
+description = "PS3 controller teleoperation interface for Zima robot"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "lerobot",
+    "pygame>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lerobot_teleoperator_zima_ps3_teleop*"]
