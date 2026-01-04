@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 import base64
 from typing import Dict, Any
+import time
 
 class ZimaRobot(Robot):
     config_class = ZimaRobotConfig
@@ -64,10 +65,13 @@ class ZimaRobot(Robot):
             return
 
         try:
+            if calibrate:
+                self.calibrate()
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((self.config.address, int(self.config.port)))
             self._connected = True
             print(f"Connected to Zima robot at {self.config.address}:{self.config.port}")
+            self.reset()
         except Exception as e:
             self._connected = False
             raise ConnectionError(f"Failed to connect to robot: {e}")
@@ -75,7 +79,9 @@ class ZimaRobot(Robot):
     def disconnect(self) -> None:
         if self.socket:
             try:
-                self.reset()
+                for _ in range(10):
+                    self.reset()
+                    time.sleep(0.1)
                 self.socket.close()
             except Exception as e:
                 print(f"Error closing socket: {e}")
