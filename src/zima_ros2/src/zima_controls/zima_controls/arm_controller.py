@@ -45,11 +45,11 @@ class ArmController(Node):
     def __init__(self, node_name):
         super().__init__(node_name)
 
-        self.declare_parameter('initial_arm_state', [0.2, 0.0, 0.1, 0.0, 0.0, 0.0])
+        self.declare_parameter('initial_arm_state', [0.2, -0.05, 0.1, 0.0, 0.0, 0.0])
         self.declare_parameter('denorm_config_path', '')
         self.declare_parameter('arm_structure_path', '')
         self.declare_parameter('arm_safety_path', '')
-        self.declare_parameter('max_error_thresh', 0.05)
+        self.declare_parameter('max_error_thresh', 0.1)
 
         initial_state = self.get_parameter('initial_arm_state').value
         denorm_path = self.get_parameter('denorm_config_path').value
