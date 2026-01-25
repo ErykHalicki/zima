@@ -61,7 +61,7 @@ class CommandGeneratorNode(Node):
         for i, servo_idx in enumerate(servo_indices):
             command = HardwareCommand()
             command.header = msg.header
-            if msg.servo_id == 3: # hack because servo port 3 appears to be burnt out
+            if servo_idx == 3: #hack because servo port 3 appears to be burnt out
                 command.subsystem = 6
             else:
                 command.subsystem = servo_idx  # Servo ID (0-7)
