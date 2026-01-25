@@ -43,7 +43,7 @@ class CommandGeneratorNode(Node):
         Convert JointState messages to hardware commands for servos.
         expects all values to be in range 0-180 degrees
         """
-        servo_indices = [0, 1, 3, 4, 5] #base, shoulder, elbow, hand, gripper 
+        servo_indices = [0, 1, 6, 4, 5] #base, shoulder, elbow, hand, gripper 
 
         if len(msg.position) < len(servo_indices):
             self.get_logger().error("JointState message has insufficient position data")
@@ -61,10 +61,7 @@ class CommandGeneratorNode(Node):
         for i, servo_idx in enumerate(servo_indices):
             command = HardwareCommand()
             command.header = msg.header
-            if servo_idx == 3: #hack because servo port 3 appears to be burnt out
-                command.subsystem = 6
-            else:
-                command.subsystem = servo_idx  # Servo ID (0-7)
+            command.subsystem = servo_idx
             command.value = msg.position[i]   
 
             self.hw_command_pub.publish(command)
