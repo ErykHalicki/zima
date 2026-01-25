@@ -77,10 +77,7 @@ class CommandGeneratorNode(Node):
         
         command = HardwareCommand()
         command.header = msg.header
-        if msg.servo_id == 3: # hack because servo port 3 appears to be burnt out
-            command.subsystem = 6
-        else:
-            command.subsystem = msg.servo_id
+        command.subsystem = msg.servo_id
         command.value = msg.position
         
         self.hw_command_pub.publish(command)

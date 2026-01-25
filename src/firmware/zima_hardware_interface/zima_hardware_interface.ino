@@ -14,6 +14,7 @@ boolean newData = false;
 
 // Timing control for status reports
 unsigned long lastStatusTime = 0;
+unsigned long lastServoUpdate = 0;
 const unsigned long statusInterval = 1000000 / STATUS_REPORT_RATE; // microseconds
 
 
@@ -115,16 +116,20 @@ void loop() {
         parseNewData();
         newData = false;
     }
+
+    unsigned long currentTime = micros();
     
     // Update Motor Positions
-    servoController.updatePositions();
+    if ( currentTime - lastServoUpdate >= 20000 ){
+        servoController.updatePositions();
+        lastServoUpdate = currentTime;
+    }
     
     // Report System Status at specified rate
-    unsigned long currentTime = micros();
     if (currentTime - lastStatusTime >= statusInterval) {
         reportStatus();
         lastStatusTime = currentTime;
     }
     
-    // No delay - run as fast as possible
+    // No delay, clear serial buffer as fast as possible
 }
