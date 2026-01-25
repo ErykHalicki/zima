@@ -225,6 +225,7 @@ class TCPInterfaceNode(Node):
             command = ServoCommand()
             command.header.stamp = self.get_clock().now().to_msg()
             command.servo_id = servo_id
+            
             if servo_id == 3:
                 command.position = 181.0
             else:
