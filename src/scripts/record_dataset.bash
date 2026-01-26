@@ -6,6 +6,6 @@ lerobot-record \
   --teleop.type=zima_ps3_teleop \
   --teleop.id=zima_ps3_teleop \
   --display_data=true \
-  --dataset.repo_id=ehalicki/zima-record-test \
+  --dataset.repo_id=ehalicki/zima-rubiks-cube \
   --dataset.num_episodes=1 \
-  --dataset.single_task="test"
+  --dataset.single_task="pick up the small rubiks cube"

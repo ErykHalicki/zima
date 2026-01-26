@@ -20,9 +20,9 @@ class KinematicSolver:
         self.dimension_mask = dimension_mask
         self.links = structure_data['links']
         self.revolute_links = [link for link in self.links if link['type']=='revolute']
-        self.orientation_weight = 0.07
+        self.orientation_weight = 0.1
         self.translation_weight = 1.0
-        self.joint_weight = 0.06
+        self.joint_weight = 0.05
         self.kd_precision = 4
         self.kd_tree, self.joint_LUT = self.create_kd_tree(fk_sample_count)
         self.max_reach = sum([np.linalg.norm(link['translation']) for link in self.links])
