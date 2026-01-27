@@ -8,7 +8,6 @@ import os
 def generate_launch_description():
     zima_controls_dir = get_package_share_directory('zima_controls')
     zima_hardware_integration_dir = get_package_share_directory('zima_hardware_integration')
-    zima_ml_dir = get_package_share_directory('zima_ml')
 
     arm_control_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
