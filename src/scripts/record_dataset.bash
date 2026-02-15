@@ -9,4 +9,3 @@ lerobot-record \
   --dataset.repo_id=ehalicki/zima-rubiks-cube \
   --dataset.num_episodes=10 \
   --dataset.single_task="pick up the small rubiks cube and place it into the bowl"
-  --dataset.push_to_hub=True
