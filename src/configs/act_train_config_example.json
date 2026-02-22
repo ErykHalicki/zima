@@ -156,7 +156,7 @@
     "resume": false,
     "seed": 1000,
     "num_workers": 4,
-    "batch_size": 24,
+    "batch_size": 16,
     "steps": 500,
     "eval_freq": 200,
     "log_freq": 50,
