@@ -1,8 +1,5 @@
 mujoco
-numpy
 opencv-python
 pynput
 h5py
-torch
-torchvision
-lerobot
+lerobot>=0.4.2
