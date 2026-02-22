@@ -1,3 +1,3 @@
 lerobot-train \
-  --config_path=configs/act_train_config.json
+  --config_path=configs/act_train_config_example.json
 
