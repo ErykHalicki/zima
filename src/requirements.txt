@@ -1,5 +1,5 @@
+lerobot>=0.4.2
 mujoco
 opencv-python
 pynput
 h5py
-lerobot>=0.4.2
