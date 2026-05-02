@@ -5,7 +5,7 @@ Zima is a custom-built rover with a 5-DOF arm, designed as a personal research p
 [Devlog](https://eryk.ca/zima_devlog.html) | [Dataset](https://huggingface.co/datasets/ehalicki/zima-rubiks-cube)
 
 <img src="https://github.com/user-attachments/assets/b820cc12-3039-4903-accd-0ddb20a8479a" width="400">
-<img src="docs/ZimaFinal-1.png" width="400">
+<img src="docs/ZimaFinal-1.png" width="800">
 
 
 
